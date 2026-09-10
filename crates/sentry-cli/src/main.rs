@@ -6,10 +6,11 @@ use colored::*;
 use sentry_bridge::SentryConduitBridge;
 use sentry_client::SentryViewer;
 use sentry_core::{
-    AcousticAnalyzer, IncidentSeverity, SentryAlert, SentryIncidentType,
+    config::SentryConfig, AcousticAnalyzer, IncidentSeverity, SentryAlert, SentryIncidentType,
 };
 use sentry_hardware::{SentryAudioSentinel, SentryCameraSentinel};
 use sentry_ledger::{SentryLedgerDb, SentryReportEngine};
+use std::path::PathBuf;
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -21,6 +22,14 @@ use uuid::Uuid;
     about = "Autonomous Sovereign Edge Sentinel & Live Acoustic Telepresence Watchdog"
 )]
 struct Cli {
+    /// Generate default ~/.config/sentry/sentry.toml starter template
+    #[arg(long)]
+    generate_config: bool,
+
+    /// Explicit path to sentry.toml configuration file
+    #[arg(short = 'c', long)]
+    config: Option<PathBuf>,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -29,25 +38,25 @@ struct Cli {
 enum Commands {
     /// Launch autonomous background sentinel watchdog daemon (Edge Hardware)
     Run {
-        #[arg(short, long, default_value = "ws://127.0.0.1:8084/ws/outpost")]
-        relay_url: String,
+        #[arg(short, long)]
+        relay_url: Option<String>,
 
         #[arg(short, long)]
         token: Option<String>,
 
-        #[arg(short, long, default_value = "Sentry Sentinel (hyperion-prime)")]
-        label: String,
+        #[arg(short, long)]
+        label: Option<String>,
 
-        #[arg(short, long, default_value = "/dev/video0")]
-        camera: String,
+        #[arg(short, long)]
+        camera: Option<String>,
 
-        #[arg(long, default_value_t = 20.0)]
-        trigger_db: f32,
+        #[arg(long)]
+        trigger_db: Option<f32>,
     },
     /// Launch remote operator client console (End-User / Developer Desktop)
     Client {
-        #[arg(short, long, default_value = "ws://127.0.0.1:8084/ws/operator")]
-        relay_url: String,
+        #[arg(short, long)]
+        relay_url: Option<String>,
 
         #[arg(short, long)]
         token: Option<String>,
@@ -55,13 +64,13 @@ enum Commands {
         #[arg(short, long, default_value = "Operator Workstation")]
         operator: String,
 
-        #[arg(short, long, default_value = "Server-Room-Sentinel (hyperion-prime)")]
-        watch_node: String,
+        #[arg(short, long)]
+        watch_node: Option<String>,
     },
     /// Connect instant low-latency LiveKit SFU telepresence stream
     Telepresence {
-        #[arg(short, long, default_value = "https://sfu.example.com:7880")]
-        sfu_url: String,
+        #[arg(short, long)]
+        sfu_url: Option<String>,
 
         #[arg(short, long, default_value = "hyperion-prime")]
         target_node: String,
@@ -92,9 +101,37 @@ enum Commands {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
+    // 1. Handle --generate-config flag
+    if cli.generate_config {
+        println!("{}", "==========================================================================".cyan());
+        println!("{}", "⚙️   SENTRY-EDGE // CONFIGURATION GENERATOR".cyan().bold());
+        println!("{}", "==========================================================================".cyan());
+        let target_path = if let Ok(home) = std::env::var("HOME") {
+            let dir = PathBuf::from(home).join(".config/sentry");
+            let _ = std::fs::create_dir_all(&dir);
+            dir.join("sentry.toml")
+        } else {
+            PathBuf::from("./sentry.toml")
+        };
+
+        std::fs::write(&target_path, SentryConfig::default_template())?;
+        println!("  ✔ Target File Path      : {}", target_path.display().to_string().green().bold());
+        println!("  ✔ Template Status       : {}", "Successfully Generated Starter Configuration".green());
+        println!("{}", "==========================================================================".cyan());
+        println!("ℹ️  Edit {} to customize your backend relay and camera devices.", target_path.display());
+        return Ok(());
+    }
+
     println!("{}", "==========================================================================".cyan());
     println!("{}", "🛡️  SENTRY-EDGE // AUTONOMOUS SOVEREIGN TELEPRESENCE SENTINEL".cyan().bold());
     println!("{}", "==========================================================================".cyan());
+
+    // Load configuration via discovery or explicit path
+    let config = if let Some(ref path) = cli.config {
+        SentryConfig::load_from_file(path)?
+    } else {
+        SentryConfig::discover()
+    };
 
     match cli.command.unwrap_or(Commands::Monitor) {
         Commands::Run {
@@ -104,19 +141,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             camera,
             trigger_db,
         } => {
+            let active_relay = relay_url.unwrap_or(config.network.relay_url);
+            let active_token = token.or(config.network.auth_token);
+            let active_label = label.unwrap_or(config.node.label);
+            let active_camera = camera.unwrap_or(config.hardware.camera_device);
+            let active_trigger = trigger_db.unwrap_or(config.hardware.acoustic_trigger_delta_db);
+
             println!("  ✔ [MODE]                : {}", "EDGE SENTINEL HARDWARE DAEMON".yellow().bold());
-            println!("  ✔ Target Relay URL      : {}", relay_url.green().bold());
-            println!("  ✔ Node Identity Label   : {}", label.yellow());
-            println!("  ✔ Camera Device         : {}", camera.yellow());
-            println!("  ✔ Acoustic Trigger Delta: +{} dB SPL", trigger_db.to_string().red().bold());
+            println!("  ✔ Target Relay URL      : {}", active_relay.green().bold());
+            println!("  ✔ Node Identity Label   : {}", active_label.yellow());
+            println!("  ✔ Camera Device         : {}", active_camera.yellow());
+            println!("  ✔ Acoustic Trigger Delta: +{} dB SPL", active_trigger.to_string().red().bold());
             println!("{}", "==========================================================================".cyan());
             println!("{}", "▶ Sentinel armed. Monitoring acoustic baseline & camera...".green().bold());
 
             let node_id = Uuid::new_v4();
-            let mut bridge = SentryConduitBridge::new(&relay_url, token, node_id, &label);
-            let mut analyzer = AcousticAnalyzer::new(35.0, trigger_db, 48000);
+            let mut bridge = SentryConduitBridge::new(&active_relay, active_token, node_id, &active_label);
+            let mut analyzer = AcousticAnalyzer::new(config.hardware.acoustic_baseline_db, active_trigger, 48000);
             let audio = SentryAudioSentinel::new();
-            let camera_sentinel = SentryCameraSentinel::new(&camera);
+            let camera_sentinel = SentryCameraSentinel::new(&active_camera);
             let ledger = SentryLedgerDb::new_in_memory()?;
 
             // Simulation loop for demonstration
@@ -135,11 +178,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 };
 
                 if let Some(peak) = analyzer.ingest_samples(&samples) {
-                    println!("  📸 Capturing 3-frame V4L2 snapshot burst...");
-                    let burst = camera_sentinel.capture_burst(3).unwrap_or_default();
+                    println!("  📸 Capturing {}-frame V4L2 snapshot burst...", config.hardware.snapshot_burst_count);
+                    let burst = camera_sentinel.capture_burst(config.hardware.snapshot_burst_count).unwrap_or_default();
                     let alert = SentryAlert::new(
                         node_id,
-                        &label,
+                        &active_label,
                         IncidentSeverity::High,
                         SentryIncidentType::AcousticSpike {
                             peak_db: peak,
@@ -166,20 +209,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             operator,
             watch_node,
         } => {
+            let active_relay = relay_url.unwrap_or(config.network.relay_url);
+            let active_token = token.or(config.network.auth_token);
+            let active_watch = watch_node.unwrap_or(config.node.label);
+
             println!("  ✔ [MODE]                : {}", "END-USER REMOTE OPERATOR CLIENT".cyan().bold());
-            println!("  ✔ Target Relay URL      : {}", relay_url.green().bold());
+            println!("  ✔ Target Relay URL      : {}", active_relay.green().bold());
             println!("  ✔ Operator Identity     : {}", operator.cyan());
-            println!("  ✔ Watching Node         : {}", watch_node.yellow().bold());
+            println!("  ✔ Watching Node         : {}", active_watch.yellow().bold());
             println!("{}", "==========================================================================".cyan());
             println!("{}", "▶ Connected to Conduit Relay. Awaiting live edge sentinel alerts...".green().bold());
 
-            let mut viewer = SentryViewer::new(&relay_url, token, &operator);
-            viewer.watch_node(&watch_node);
+            let mut viewer = SentryViewer::new(&active_relay, active_token, &operator);
+            viewer.watch_node(&active_watch);
 
             // Simulate receiving a live remote alert from the edge sentinel
             let incoming_alert = SentryAlert::new(
                 Uuid::new_v4(),
-                &watch_node,
+                &active_watch,
                 IncidentSeverity::Critical,
                 SentryIncidentType::AcousticSpike {
                     peak_db: 94.8,
@@ -199,13 +246,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             target_node,
             operator,
         } => {
+            let active_sfu = sfu_url.unwrap_or(config.telepresence.sfu_url);
+
             println!("  ✔ Connecting WebRTC LiveKit SFU Telepresence...");
-            println!("  ✔ SFU Gateway           : {}", sfu_url.green().bold());
+            println!("  ✔ SFU Gateway           : {}", active_sfu.green().bold());
             println!("  ✔ Target Sentinel Node  : {}", target_node.yellow().bold());
             println!("  ✔ Operator              : {}", operator.cyan());
 
             let viewer = SentryViewer::new("wss://relay.example.com:8084", None, &operator);
-            let session = viewer.connect_telepresence(&sfu_url, &target_node)?;
+            let session = viewer.connect_telepresence(&active_sfu, &target_node)?;
             println!("{}", "==========================================================================".cyan());
             println!("  ✔ LiveKit Room Created  : {}", session.room_name.green().bold());
             println!("  ✔ Auth Token Generated  : {}...", &session.token[..32].dimmed());
@@ -236,7 +285,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Report { output } => {
             println!("📊 Compiling security dossier...");
-            let html = SentryReportEngine::generate_html_dossier("hyperion-prime", 12)?;
+            let html = SentryReportEngine::generate_html_dossier(&config.node.label, 12)?;
             std::fs::write(&output, html)?;
             println!("{}", format!("✔ Report saved to {}", output).green().bold());
         }

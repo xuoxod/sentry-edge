@@ -5,12 +5,12 @@ use uuid::Uuid;
 
 #[test]
 fn test_acoustic_analyzer_quiet_vs_spike() {
-    let mut analyzer = AcousticAnalyzer::new(30.0, 20.0, 48000);
+    let mut analyzer = AcousticAnalyzer::new(35.0, 20.0, 48000);
 
-    // 1. Quiet noise buffer
-    let quiet_samples = vec![100i16; 1024];
+    // 1. Quiet baseline noise buffer
+    let quiet_samples = vec![150i16; 1024];
     let quiet_db = analyzer.compute_db_spl(&quiet_samples);
-    assert!(quiet_db < 40.0, "Quiet samples should be low dB: {}", quiet_db);
+    assert!(quiet_db < 45.0, "Quiet samples should be low dB: {}", quiet_db);
     assert_eq!(analyzer.ingest_samples(&quiet_samples), None);
 
     // 2. Loud spike noise buffer
@@ -42,4 +42,5 @@ fn test_sentry_alert_sha256_integrity() {
     assert_eq!(alert.node_label, "Sentinel-Alpha");
     assert_eq!(alert.severity, IncidentSeverity::High);
     assert_eq!(alert.event_signature_sha256.len(), 64);
+    assert!(alert.verify_signature());
 }

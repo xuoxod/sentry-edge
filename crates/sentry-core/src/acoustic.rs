@@ -1,6 +1,6 @@
 //! Acoustic RMS Audio Analyzer & Spike Detector
 
-/// Sliding window acoustic energy and decibel SPL analyzer.
+/// Sliding window acoustic energy and decibel SPL analyzer with adaptive DSP baseline.
 #[derive(Debug, Clone)]
 pub struct AcousticAnalyzer {
     pub baseline_db: f32,
@@ -8,6 +8,7 @@ pub struct AcousticAnalyzer {
     pub sample_rate: u32,
     pub history: Vec<f32>,
     pub max_history: usize,
+    pub is_initialized: bool,
 }
 
 impl AcousticAnalyzer {
@@ -18,6 +19,7 @@ impl AcousticAnalyzer {
             sample_rate,
             history: Vec::with_capacity(50),
             max_history: 50,
+            is_initialized: false,
         }
     }
 
@@ -48,19 +50,29 @@ impl AcousticAnalyzer {
     /// Ingest a new audio buffer and determine if an acoustic spike threshold is breached.
     pub fn ingest_samples(&mut self, pcm_samples: &[i16]) -> Option<f32> {
         let current_db = self.compute_db_spl(pcm_samples);
+
+        if !self.is_initialized {
+            self.baseline_db = current_db;
+            self.is_initialized = true;
+        }
+
+        let delta = current_db - self.baseline_db;
+
+        // Check if delta breaches trigger threshold (ignoring normal background whisper < 40 dB)
+        let is_spike = delta >= self.trigger_delta_db && current_db > 45.0;
+
+        // If not a spike, adaptively update baseline via Exponential Moving Average (EMA)
+        if !is_spike {
+            let alpha = 0.15; // Smooth adaptation factor
+            self.baseline_db = (1.0 - alpha) * self.baseline_db + alpha * current_db;
+        }
+
         self.history.push(current_db);
         if self.history.len() > self.max_history {
             self.history.remove(0);
         }
 
-        // Dynamically compute baseline if history is sufficient
-        if self.history.len() >= 10 {
-            let avg: f32 = self.history.iter().sum::<f32>() / self.history.len() as f32;
-            self.baseline_db = avg;
-        }
-
-        let delta = current_db - self.baseline_db;
-        if delta >= self.trigger_delta_db && current_db > 40.0 {
+        if is_spike {
             Some(current_db)
         } else {
             None
