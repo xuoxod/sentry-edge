@@ -1,25 +1,20 @@
 [package]
-name = "sentry-cli"
+name = "sentry-client"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
-[[bin]]
-name = "sentry-edge"
-path = "src/main.rs"
-
 [dependencies]
 sentry-core = { path = "../sentry-core" }
-sentry-hardware = { path = "../sentry-hardware" }
 sentry-telepresence = { path = "../sentry-telepresence" }
-sentry-bridge = { path = "../sentry-bridge" }
-sentry-ledger = { path = "../sentry-ledger" }
-sentry-client = { path = "../sentry-client" }
-clap = { workspace = true }
-colored = { workspace = true }
-tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+colored = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

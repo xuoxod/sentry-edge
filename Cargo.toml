@@ -6,6 +6,7 @@ members = [
     "crates/sentry-telepresence",
     "crates/sentry-bridge",
     "crates/sentry-ledger",
+    "crates/sentry-client",
     "crates/sentry-cli",
 ]
 
