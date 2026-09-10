@@ -1,0 +1,21 @@
+[package]
+name = "sentry-telemetry"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Hyper-meticulous nanosecond/picosecond structured telemetry, tamper-evident hash-chain audit logging, and multi-sink analytics engine for Sentry-Edge"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+rusqlite = { workspace = true }
+colored = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
