@@ -123,6 +123,41 @@ pub struct ForensicEvent {
     pub duration_ps: String,
     pub record_hash: String,
     pub prev_hash: String,
+
+    // Rich 5W1H Micro-Provenance
+    pub who_identity: String,
+    pub who_session_id: String,
+    pub who_token_prefix: String,
+    pub who_peer_id: Option<String>,
+
+    pub from_device: String,
+    pub from_thread: String,
+    pub from_endpoint: String,
+    pub from_physical_addr: Option<String>,
+
+    pub to_destination: Option<String>,
+    pub to_relay: String,
+    pub to_wal: String,
+    pub to_client: Option<String>,
+
+    pub how_protocol: String,
+    pub how_transport: String,
+    pub how_cipher: String,
+    pub how_compression: Option<String>,
+
+    // Optical Burst & Telemetry Payload Minutiae
+    pub frames_captured: usize,
+    pub shutter_latency_ns: u64,
+    pub shutter_latency_ps: String,
+    pub payload_bytes: usize,
+    pub payload_sha256: String,
+
+    // Engine Minutiae & Resource Footprint
+    pub cpu_rss_mb: f32,
+    pub dsp_ema_alpha: f32,
+    pub wal_page_count: u32,
+    pub sqlite_commit_ns: u64,
+    pub network_rtt_ms: f32,
 }
 
 /// The Single Source of Truth (SST) Report Document.

@@ -123,6 +123,38 @@ impl Storyteller {
                 duration_ps: rec.what.duration_ps.to_string(),
                 record_hash: rec.record_hash.clone(),
                 prev_hash: rec.prev_record_hash.clone(),
+
+                who_identity: rec.who.identity.clone(),
+                who_session_id: rec.who.session_id.clone(),
+                who_token_prefix: rec.who.token_prefix.clone(),
+                who_peer_id: rec.who.peer_id.clone(),
+
+                from_device: rec.from.source_device.clone(),
+                from_thread: rec.from.thread_id.clone(),
+                from_endpoint: rec.from.endpoint.clone(),
+                from_physical_addr: rec.from.physical_addr.clone(),
+
+                to_destination: rec.to.destination_hardware.clone(),
+                to_relay: rec.to.remote_relay.clone(),
+                to_wal: rec.to.database_wal.clone(),
+                to_client: rec.to.client_ui.clone(),
+
+                how_protocol: rec.how.protocol.clone(),
+                how_transport: rec.how.transport.clone(),
+                how_cipher: rec.how.cipher.clone(),
+                how_compression: rec.how.compression.clone(),
+
+                frames_captured: rec.what.frames_captured,
+                shutter_latency_ns: rec.what.shutter_latency_ns,
+                shutter_latency_ps: rec.what.shutter_latency_ps.to_string(),
+                payload_bytes: rec.what.payload_bytes,
+                payload_sha256: rec.what.payload_sha256.clone(),
+
+                cpu_rss_mb: rec.minutiae.cpu_rss_mb,
+                dsp_ema_alpha: rec.minutiae.dsp_ema_alpha,
+                wal_page_count: rec.minutiae.wal_page_count,
+                sqlite_commit_ns: rec.minutiae.sqlite_commit_ns,
+                network_rtt_ms: rec.minutiae.network_rtt_ms,
             });
         }
 

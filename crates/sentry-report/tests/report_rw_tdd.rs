@@ -125,6 +125,11 @@ fn test_rw_report_orchestrator_all_formats_roundtrip() {
     assert!(html.contains("SENTRY-EDGE // EXECUTIVE DOSSIER"));
     assert!(html.contains("Acoustic spike breach"));
     assert!(html.contains("SHA-256 HASH CHAIN VERIFIED"));
+    assert!(html.contains("toggleDrawer('drawer-3')"));
+    assert!(html.contains("drawer-3"));
+    assert!(html.contains("5W1H Micro-Provenance"));
+    assert!(html.contains("Optical Capture Viewfinder"));
+    assert!(html.contains("btn-filter-alert"));
 
     // 2. JSON
     let json = ReportOrchestrator::render(&doc, ReportFormat::Json).unwrap();
