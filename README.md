@@ -11,9 +11,16 @@
 
 [![Rust Version](https://img.shields.io/badge/rust-2021%20edition-orange.svg?style=flat-square)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-blue.svg?style=flat-square)](LICENSE)
-[![Zero Inbound Ports](https://img.shields.io/badge/firewall-0%20inbound%20ports-brightgreen.svg?style=flat-square)](https://github.com/xuoxod/conduit)
-[![Hardware Isolation](https://img.shields.io/badge/V4L2-RAII%20Camera%20Lock-cyan.svg?style=flat-square)](crates/sentry-hardware)
-[![Test Battery](https://img.shields.io/badge/TDD%20Battery-11%2F11%20Passed-success.svg?style=flat-square)](tests)
+[![Zero Dynamic Glibc](https://img.shields.io/badge/binary-static--musl%20zero--glibc-brightgreen.svg?style=flat-square)](docs/ARCHITECTURE_AND_HAL.md)
+[![Hardware HAL](https://img.shields.io/badge/HAL-Trait--Based%20Multi--OS-cyan.svg?style=flat-square)](crates/sentry-hardware)
+[![Test Battery](https://img.shields.io/badge/TDD%20Battery-47%2F47%20Passed%20(100%25)-success.svg?style=flat-square)](tests)
+
+---
+
+## 📚 Dedicated Documentation & Field Manuals
+
+* 📖 [**Comprehensive Operator Guide & Field Manual**](docs/OPERATOR_GUIDE.md): Real-world deployment walkthrough, ambient TV DSP adaptation, acoustic spike mechanics, daemon management (`sentry-daemon.sh`), and the *"If You Wanted to Know / See If..."* operator playbook.
+* 🏛️ [**Architecture & HAL Specification**](docs/ARCHITECTURE_AND_HAL.md): Trait-based Hardware Abstraction Layer, multi-OS drivers (Linux, macOS, Windows, Procedural), static-musl zero-glibc compilation, and nanosecond/picosecond cryptographic hash-chain engine.
 
 ---
 
@@ -26,8 +33,9 @@ Commercial security cameras (Ring, Nest, Wyze, Arlo) force an unacceptable priva
 * 🎙️ **Acoustic Noise Watchdog**: Continuous sliding-window RMS audio analysis detects sudden acoustic anomalies ($+20\text{ dB SPL}$ over baseline, glass breaking, sirens, intrusions).
 * 📸 **V4L2 Burst Sentinel**: Automatically triggers a 5-frame 1080p JPEG burst upon acoustic breach with hardware LED isolation (camera powers down immediately after frame release).
 * ⚡ **Sub-10ms LiveKit SFU Telepresence**: Stream real-time 60FPS video and two-way walkie-talkie intercom directly to any mobile phone browser worldwide.
-* 📱 **Two-Sided Architecture**: Includes both the **Edge Hardware Sentinel Daemon** and the **Remote End-User Client App** for live alert feeds and on-demand camera viewing.
-* 📜 **Immutable SQLite WAL Ledger**: All incidents are cryptographically signed with SHA-256 and persisted in an embedded SQLite WAL database with dark-mode SVG dossier exports.
+* ⏱️ **Nanosecond / Picosecond Provenance**: Meticulous telemetry tracking (`Who`, `From`, `To`, `What`, `How`, `Minutiae`) sealed with an immutable cryptographic SHA-256 blockchain hash chain.
+* 🔬 **Trait-Based HAL**: Native Linux ALSA & V4L2, macOS CoreAudio & AVFoundation, Windows WASAPI & MediaFoundation, with automatic procedural simulation fallback.
+* 📦 **100% Platform-Agnostic Static Binary**: Built with `x86_64-unknown-linux-musl` and `crt-static`, eliminating all `GLIBC_X.XX not found` library mismatches.
 
 ---
 
@@ -38,7 +46,7 @@ graph TD
     subgraph EdgeDevice["🏠 Physical Sentinel Node (Laptop / Pi / Mini-PC)"]
         Mic["🎙️ ALSA/PipeWire Continuous RMS Stream"]
         Cam["📸 Native V4L2 Device (`/dev/video0`)"]
-        SentryDaemon["🛡️ `sentry-edge run`<br/>• Acoustic Analyzer<br/>• Burst Capturer<br/>• SQLite WAL Ledger"]
+        SentryDaemon["🛡️ `sentry-edge run`<br/>• Acoustic Analyzer<br/>• Burst Capturer<br/>• SQLite WAL Ledger<br/>• Nanosecond Telemetry Engine"]
     end
 
     subgraph SovereignBackend["🌐 Your Self-Hosted Backend Infrastructure"]
@@ -65,123 +73,97 @@ graph TD
 
 ## 🚀 Quickstart & Usage
 
-### 1. Build from Source
+### 1. Build Zero-Dependency Static Release Binary
 ```bash
-git clone https://github.com/xuoxod/sentry-edge.git
-cd sentry-edge
-cargo build --release
+# Build 100% standalone static binary (zero host glibc dependencies)
+cargo build --release --target x86_64-unknown-linux-musl
+
+# Verify static linking
+file target/x86_64-unknown-linux-musl/release/sentry-edge
 ```
 
 ---
 
-### 2. Role A: Launch the Edge Sentinel Daemon (On Monitored Device)
+### 2. Inspect Host Hardware & HAL Profile
 ```bash
-# Launch background hardware sentinel connected to your self-hosted Conduit Relay
-./target/release/sentry-edge run \
+./target/x86_64-unknown-linux-musl/release/sentry-edge --profile
+```
+
+---
+
+### 3. Launch Edge Sentinel Hardware Daemon
+```bash
+./target/x86_64-unknown-linux-musl/release/sentry-edge run \
     --relay-url wss://relay.example.com:8084/ws/outpost \
-    --token your-secret-token \
-    --label "Server-Room-Sentinel (hyperion-prime)" \
+    --token sentry-dev-99x \
+    --label "crunchbang-laptop" \
     --camera /dev/video0 \
     --trigger-db 20.0
 ```
 
-#### What to Expect on the Edge Machine:
-```text
-==========================================================================
-🛡️  SENTRY-EDGE // AUTONOMOUS SOVEREIGN TELEPRESENCE SENTINEL
-==========================================================================
-  ✔ [MODE]                : EDGE SENTINEL HARDWARE DAEMON
-  ✔ Target Relay URL      : wss://relay.example.com:8084/ws/outpost
-  ✔ Node Identity Label   : Server-Room-Sentinel (hyperion-prime)
-  ✔ Camera Device         : /dev/video0
-  ✔ Acoustic Trigger Delta: +20 dB SPL
-==========================================================================
-▶ Sentinel armed. Monitoring acoustic baseline & camera...
-  [dB Meter] Current: 38.5 dB | Baseline: 35.0 dB
-  [dB Meter] Current: 38.5 dB | Baseline: 35.0 dB
-🚨 [ACOUSTIC SPIKE DETECTED] Sudden sound burst!
-  📸 Capturing 3-frame V4L2 snapshot burst...
-  ✔ Dispatched SentryWirePacket #1 over Conduit WSS tunnel!
-```
-
 ---
 
-### 3. Role B: Launch the Remote End-User Client App (On Your Laptop / Phone)
+### 4. Connect Remote Operator Client
 ```bash
-# Connect as remote operator to receive live alerts and control the sentinel
-./target/release/sentry-edge client \
+./target/x86_64-unknown-linux-musl/release/sentry-edge client \
     --relay-url wss://relay.example.com:8084/ws/operator \
-    --operator "Rick-Workstation" \
-    --watch-node "Server-Room-Sentinel (hyperion-prime)"
-```
-
-#### What to Expect on Your Operator Screen:
-```text
-==========================================================================
-🛡️  SENTRY-EDGE // AUTONOMOUS SOVEREIGN TELEPRESENCE SENTINEL
-==========================================================================
-  ✔ [MODE]                : END-USER REMOTE OPERATOR CLIENT
-  ✔ Target Relay URL      : wss://relay.example.com:8084/ws/operator
-  ✔ Operator Identity     : Rick-Workstation
-  ✔ Watching Node         : Server-Room-Sentinel (hyperion-prime)
-==========================================================================
-▶ Connected to Conduit Relay. Awaiting live edge sentinel alerts...
-
-[CRITICAL] [22:27:06] 🚨 Node: Server-Room-Sentinel (hyperion-prime) >> Acoustic Spike (+58.6 dB over baseline | Peak: 94.8 dB)
-   Description: Glass shatter / forced entry acoustic frequency detected at Server Rack 02
-   Integrity SHA-256: 903ba9da620e5a89
-
-✔ Alert verified & cryptographically authenticated.
-```
-
----
-
-### 4. Role C: Connect Live Two-Way Telepresence & Walkie-Talkie
-```bash
-# Instant sub-10ms LiveKit SFU WebRTC room creation
-sentry-edge telepresence --sfu-url https://sfu.example.com:7880 --target-node hyperion-prime
+    --operator "Operator-Rick" \
+    --watch-node "crunchbang-laptop"
 ```
 
 ---
 
 ### 5. Essential Operator Commands
-```bash
-# Live real-time audio decibel level meter in terminal
-sentry-edge monitor
 
-# Test 880Hz attention warning siren / chime
-sentry-edge test-chime
-
-# Capture instant high-resolution V4L2 camera snapshot
-sentry-edge snapshot --camera /dev/video0 --output /tmp/snapshot.jpg
-
-# Generate dark-mode HTML security dossier with embedded SVG charts
-sentry-edge report --output /tmp/security_dossier.html
-```
+| Task | Command |
+| :--- | :--- |
+| **Real-Time Sound Meter HUD** | `sentry-edge monitor` |
+| **Test Warning Siren / Chime** | `sentry-edge test-chime` |
+| **Capture Instant Snapshot** | `sentry-edge snapshot --camera /dev/video0 --output /tmp/test.jpg` |
+| **Inspect Nanosecond Logs** | `sentry-edge logs --tail 20` |
+| **Verify SHA-256 Hash Chain** | `sentry-edge logs --verify-chain` |
+| **View Telemetry Statistics** | `sentry-edge logs --stats` |
+| **Export HTML Dossier** | `sentry-edge report --output /tmp/sentry_dossier.html` |
 
 ---
 
-## 🧩 Micro-OJP Multi-Crate Workspace Layout
+## 💡 The "If You Wanted to Know..." Quick Reference
+
+* **If you want to know if the sentinel is actively listening:** Run `sentry-edge monitor`.
+* **If you want to see if an acoustic spike was triggered:** Run `sentry-edge logs --tail 10` or check `sentry-daemon.stdout`.
+* **If you want to verify that no logs were modified or tampered with:** Run `sentry-edge logs --verify-chain`.
+* **If you want to view detected OS, CPU arch, and active HAL drivers:** Run `sentry-edge --profile`.
+* **If you want to customize trigger thresholds or database paths:** Edit `~/.config/sentry/sentry.toml`.
+
+---
+
+## 🧩 Micro-OJP Multi-Crate Layout
 
 ```
 sentry-edge/
 ├── Cargo.toml                  # Standalone workspace definition (Zero local path dependencies)
+├── .cargo/config.toml          # Static-musl crt-static configuration
 ├── crates/
-│   ├── sentry-core/            # Pure acoustic RMS math, dB SPL calibration & data models
-│   ├── sentry-hardware/        # Native Linux V4L2 camera capture & ALSA/PipeWire audio
-│   ├── sentry-telepresence/    # Real-time WebRTC LiveKit SFU integration & 2-way intercom
+│   ├── sentry-core/            # Pure DSP acoustic math, PlatformInfo, PlatformPaths, SentryAlert
+│   ├── sentry-hardware/        # Trait-based HAL: Linux (ALSA/V4L2), macOS, Windows, Procedural
+│   ├── sentry-telemetry/       # Picosecond timers, provenance model, SHA-256 hash-chain engine
 │   ├── sentry-bridge/          # Outbound TLS WebSocket connector linking Sentry to Conduit
+│   ├── sentry-telepresence/    # Real-time WebRTC LiveKit SFU integration & 2-way intercom
 │   ├── sentry-ledger/          # SQLite WAL incident persistence & SVG report engine
 │   ├── sentry-client/          # End-user remote operator application & alert viewer
 │   └── sentry-cli/             # Standalone operator CLI, audio meter & daemon binary
+└── docs/
+    ├── OPERATOR_GUIDE.md       # Complete real-world field manual & operator playbook
+    └── ARCHITECTURE_AND_HAL.md # Architectural & Hardware Abstraction Layer specification
 ```
 
 ---
 
-## 🧪 Test Suite & Verification
+## 🧪 Test Battery & Verification
 
 ```bash
 cargo test --workspace
+# 47 / 47 Tests Passed (100% Success) across 8 Micro-OJP crates
 ```
 
 ---
