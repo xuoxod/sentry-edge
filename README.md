@@ -13,7 +13,7 @@
 [![License](https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-blue.svg?style=flat-square)](LICENSE)
 [![Zero Dynamic Glibc](https://img.shields.io/badge/binary-static--musl%20zero--glibc-brightgreen.svg?style=flat-square)](docs/ARCHITECTURE_AND_HAL.md)
 [![Hardware HAL](https://img.shields.io/badge/HAL-Trait--Based%20Multi--OS-cyan.svg?style=flat-square)](crates/sentry-hardware)
-[![Test Battery](https://img.shields.io/badge/TDD%20Battery-47%2F47%20Passed%20(100%25)-success.svg?style=flat-square)](tests)
+[![Test Battery](https://img.shields.io/badge/TDD%20Battery-56%2F56%20Passed%20(100%25)-success.svg?style=flat-square)](tests)
 
 ---
 
