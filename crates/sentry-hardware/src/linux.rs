@@ -152,7 +152,27 @@ impl CameraDevice for LinuxV4l2Camera {
             return self.fallback.capture_frame();
         }
 
-        // Native Linux V4L2 device capture or synthetic frame
+        // Try ffmpeg V4L2 single-frame capture
+        if let Ok(output) = Command::new("ffmpeg")
+            .args(["-y", "-f", "v4l2", "-i", &self.device_path, "-frames:v", "1", "-f", "image2pipe", "-vcodec", "mjpeg", "-"])
+            .output()
+        {
+            if output.status.success() && !output.stdout.is_empty() {
+                return Ok(output.stdout);
+            }
+        }
+
+        // Try fswebcam stdout capture
+        if let Ok(output) = Command::new("fswebcam")
+            .args(["-d", &self.device_path, "-q", "--jpeg", "85", "-r", "640x480", "--save", "-"])
+            .output()
+        {
+            if output.status.success() && !output.stdout.is_empty() {
+                return Ok(output.stdout);
+            }
+        }
+
+        // Seamless fallback to procedural synthetic JPEG frame generator
         self.fallback.capture_frame()
     }
 
