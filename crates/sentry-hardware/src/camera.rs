@@ -1,46 +1,42 @@
-//! Sentry V4L2 Camera Capture & Burst Controller (Self-Contained)
+//! Sentry Camera Capture & Optical Burst Controller
+//! High-level HAL camera sentinel wrapping cross-platform physical cameras and synthetic test patterns.
 
+use crate::factory::HardwareFactory;
+use crate::traits::{CameraDevice, DriverInfo};
 use sentry_core::SentryResult;
-use std::path::Path;
 
+/// High-level camera sentinel managing frame capture and rapid security bursts.
 pub struct SentryCameraSentinel {
+    camera: Box<dyn CameraDevice>,
     device_path: String,
 }
 
 impl SentryCameraSentinel {
     pub fn new(device_path: impl Into<String>) -> Self {
+        let path = device_path.into();
+        let camera = HardwareFactory::create_camera(&path);
         Self {
-            device_path: device_path.into(),
+            camera,
+            device_path: path,
         }
     }
 
-    /// Capture a single high-resolution JPEG frame with RAII device lock isolation.
-    pub fn capture_frame(&self) -> SentryResult<Vec<u8>> {
-        let path = Path::new(&self.device_path);
-        if !path.exists() {
-            // Emulate / mock fallback if no physical hardware device is connected
-            return Ok(self.generate_synthetic_jpeg_frame());
-        }
+    pub fn device_path(&self) -> &str {
+        &self.device_path
+    }
 
-        // Native Linux V4L2 frame query or fallback frame
-        Ok(self.generate_synthetic_jpeg_frame())
+    /// Capture a single high-resolution JPEG frame.
+    pub fn capture_frame(&self) -> SentryResult<Vec<u8>> {
+        self.camera.capture_frame()
     }
 
     /// Capture a multi-frame burst upon security trigger.
     pub fn capture_burst(&self, count: usize) -> SentryResult<Vec<Vec<u8>>> {
-        let mut frames = Vec::with_capacity(count);
-        for _ in 0..count {
-            frames.push(self.capture_frame()?);
-        }
-        Ok(frames)
+        self.camera.capture_burst(count)
     }
 
-    /// Generate an authentic, structured JPEG frame payload with timestamp and security watermark.
-    fn generate_synthetic_jpeg_frame(&self) -> Vec<u8> {
-        // Standard JPEG SOI marker (0xFF, 0xD8) + payload header + EOI marker (0xFF, 0xD9)
-        let mut bytes = vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, b'J', b'F', b'I', b'F', 0x00, 0x01, 0x01];
-        bytes.extend_from_slice(b"SENTRY_V4L2_SOVEREIGN_BURST_FRAME");
-        bytes.extend_from_slice(&[0xFF, 0xD9]);
-        bytes
+    /// Retrieve driver information for telemetry audit logging.
+    pub fn driver_info(&self) -> DriverInfo {
+        self.camera.driver_info()
     }
 }

@@ -2,7 +2,7 @@
 
 use crate::error::{SentryError, SentryResult};
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Main persistent configuration structure for Sentry-Edge.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -153,8 +153,8 @@ export_dir = "./reports"
 
     /// Discover configuration automatically in order of precedence:
     /// 1. Path in `SENTRY_CONFIG` env var
-    /// 2. `~/.config/sentry/sentry.toml`
-    /// 3. `/etc/sentry/sentry.toml`
+    /// 2. OS Standard config path (`~/.config/sentry/sentry.toml`, `%APPDATA%\sentry\sentry.toml`, `~/Library/Application Support/sentry/sentry.toml`)
+    /// 3. `/etc/sentry/sentry.toml` (Unix systems)
     /// 4. `./sentry.toml`
     /// 5. In-memory defaults
     pub fn discover() -> Self {
@@ -164,11 +164,9 @@ export_dir = "./reports"
             }
         }
 
-        if let Ok(home) = std::env::var("HOME") {
-            let user_cfg = PathBuf::from(home).join(".config/sentry/sentry.toml");
-            if let Ok(cfg) = Self::load_from_file(&user_cfg) {
-                return cfg;
-            }
+        let user_cfg = crate::platform::PlatformPaths::default_config_path();
+        if let Ok(cfg) = Self::load_from_file(&user_cfg) {
+            return cfg;
         }
 
         let etc_cfg = Path::new("/etc/sentry/sentry.toml");
@@ -211,13 +209,11 @@ export_dir = "./reports"
             )));
         }
 
-        // Defense against path traversal attacks in database path
-        if self.storage.ledger_db_path.contains("..") {
-            return Err(SentryError::Config(
-                "Security violation: Ledger DB path contains forbidden path traversal sequence ('..')".to_string(),
-            ));
-        }
+        // Defense against path traversal attacks in database and export paths
+        crate::platform::PlatformPaths::validate_safe_path(Path::new(&self.storage.ledger_db_path))?;
+        crate::platform::PlatformPaths::validate_safe_path(Path::new(&self.storage.export_dir))?;
 
         Ok(())
     }
 }
+

@@ -1,14 +1,16 @@
 //! # SENTRY-EDGE (`sentry-edge`) CLI, Daemon & End-User Client
 //! Autonomous Sovereign Edge Sentinel & Live Acoustic Telepresence Watchdog.
+//! Enterprise-grade platform-agnostic architecture across Linux, macOS, Windows, and FreeBSD.
 
 use clap::{Parser, Subcommand};
 use colored::*;
 use sentry_bridge::SentryConduitBridge;
 use sentry_client::SentryViewer;
 use sentry_core::{
-    config::SentryConfig, AcousticAnalyzer, IncidentSeverity, SentryAlert, SentryIncidentType,
+    config::SentryConfig, AcousticAnalyzer, IncidentSeverity, PlatformInfo, PlatformPaths,
+    SentryAlert, SentryIncidentType,
 };
-use sentry_hardware::{SentryAudioSentinel, SentryCameraSentinel};
+use sentry_hardware::{HardwareFactory, SentryAudioSentinel, SentryCameraSentinel, SentryHardwareSentinel};
 use sentry_ledger::{SentryLedgerDb, SentryReportEngine};
 use sentry_telemetry::{
     FromProvenance, HowProvenance, MinutiaeMetadata, PicoTimer, Severity, SubsystemTag,
@@ -27,13 +29,17 @@ use uuid::Uuid;
     about = "Autonomous Sovereign Edge Sentinel & Live Acoustic Telepresence Watchdog"
 )]
 struct Cli {
-    /// Generate default ~/.config/sentry/sentry.toml starter template
+    /// Generate default sentry.toml starter template in OS configuration directory
     #[arg(long)]
     generate_config: bool,
 
     /// Explicit path to sentry.toml configuration file
     #[arg(short = 'c', long)]
     config: Option<PathBuf>,
+
+    /// Display host platform environment and detected HAL hardware drivers
+    #[arg(long)]
+    profile: bool,
 
     #[command(subcommand)]
     command: Option<Commands>,
@@ -114,44 +120,41 @@ enum Commands {
         #[arg(short, long, default_value = "/dev/video0")]
         camera: String,
 
-        #[arg(short, long, default_value = "/tmp/sentry_snapshot.jpg")]
-        output: String,
+        #[arg(short, long)]
+        output: Option<PathBuf>,
     },
     /// Generate HTML / Markdown security dossier
     Report {
-        #[arg(short, long, default_value = "/tmp/sentry_dossier.html")]
-        output: String,
+        #[arg(short, long)]
+        output: Option<PathBuf>,
     },
+    /// Inspect platform hardware profile & HAL driver mappings
+    Profile,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
+    let platform = PlatformInfo::detect();
 
     // 1. Handle --generate-config flag
     if cli.generate_config {
         println!("{}", "==========================================================================".cyan());
         println!("{}", "⚙️   SENTRY-EDGE // CONFIGURATION GENERATOR".cyan().bold());
         println!("{}", "==========================================================================".cyan());
-        let target_path = if let Ok(home) = std::env::var("HOME") {
-            let dir = PathBuf::from(home).join(".config/sentry");
-            let _ = std::fs::create_dir_all(&dir);
-            dir.join("sentry.toml")
-        } else {
-            PathBuf::from("./sentry.toml")
-        };
+        let target_path = PlatformPaths::default_config_path();
+        if let Some(parent) = target_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
 
         std::fs::write(&target_path, SentryConfig::default_template())?;
         println!("  ✔ Target File Path      : {}", target_path.display().to_string().green().bold());
+        println!("  ✔ Platform Profile      : {}", platform.display_summary().yellow());
         println!("  ✔ Template Status       : {}", "Successfully Generated Starter Configuration".green());
         println!("{}", "==========================================================================".cyan());
         println!("ℹ️  Edit {} to customize your backend relay and camera devices.", target_path.display());
         return Ok(());
     }
-
-    println!("{}", "==========================================================================".cyan());
-    println!("{}", "🛡️  SENTRY-EDGE // AUTONOMOUS SOVEREIGN TELEPRESENCE SENTINEL".cyan().bold());
-    println!("{}", "==========================================================================".cyan());
 
     // Load configuration via discovery or explicit path
     let config = if let Some(ref path) = cli.config {
@@ -159,6 +162,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         SentryConfig::discover()
     };
+
+    // 2. Handle --profile flag or Profile subcommand
+    if cli.profile || matches!(cli.command, Some(Commands::Profile)) {
+        println!("{}", "==========================================================================".cyan());
+        println!("{}", "🔬  SENTRY-EDGE // HARDWARE ABSTRACTION LAYER (HAL) PROFILE".cyan().bold());
+        println!("{}", "==========================================================================".cyan());
+        let hw_profile = HardwareFactory::detect_profile(&config.hardware.audio_device, &config.hardware.camera_device);
+
+        println!("  ✔ Host OS               : {}", hw_profile.os.green().bold());
+        println!("  ✔ CPU Architecture      : {}", hw_profile.arch.yellow().bold());
+        println!("  ✔ Static Musl Binary    : {}", if platform.is_musl { "YES (Static Linked)".green().bold() } else { "NO (Dynamic/Standard C Lib)".yellow() });
+        println!("  ✔ Container Environment : {}", if platform.is_container { "YES (Container/MicroVM)".yellow() } else { "NO (Bare Metal Hardware)".green() });
+        println!("  ✔ Config Path           : {}", PlatformPaths::default_config_path().display().to_string().cyan());
+        println!("  ✔ Ledger Database       : {}", PlatformPaths::default_ledger_path().display().to_string().cyan());
+        println!("  ✔ Audit Log Path        : {}", PlatformPaths::default_audit_log_path().display().to_string().cyan());
+        println!("{}", "--------------------------------------------------------------------------".dimmed());
+        println!("  🔊 Audio Input Driver   : {:?} -> {}", hw_profile.audio_input.driver_type, hw_profile.audio_input.details.green());
+        println!("  📢 Audio Output Driver  : {:?} -> {}", hw_profile.audio_output.driver_type, hw_profile.audio_output.details.green());
+        println!("  📷 Camera Sensor Driver : {:?} -> {}", hw_profile.camera.driver_type, hw_profile.camera.details.green());
+        println!("{}", "==========================================================================".cyan());
+        return Ok(());
+    }
+
+    println!("{}", "==========================================================================".cyan());
+    println!("{}", "🛡️  SENTRY-EDGE // AUTONOMOUS SOVEREIGN TELEPRESENCE SENTINEL".cyan().bold());
+    println!("  ✔ Platform Runtime      : {}", platform.display_summary().dimmed());
+    println!("{}", "==========================================================================".cyan());
 
     match cli.command.unwrap_or(Commands::Monitor) {
         Commands::Run {
@@ -185,15 +215,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let node_id = Uuid::new_v4();
             let mut bridge = SentryConduitBridge::new(&active_relay, active_token, node_id, &active_label);
             let mut analyzer = AcousticAnalyzer::new(config.hardware.acoustic_baseline_db, active_trigger, 48000);
-            let audio = SentryAudioSentinel::with_device(&config.hardware.audio_device);
-            let camera_sentinel = SentryCameraSentinel::new(&active_camera);
+            let sentinel = SentryHardwareSentinel::new(&config.hardware.audio_device, &active_camera);
             let ledger = SentryLedgerDb::new_in_memory()?;
 
-            let audit_log_path = if let Ok(home) = std::env::var("HOME") {
-                PathBuf::from(home).join(".config/sentry/logs/sentry_audit.jsonl")
-            } else {
-                PathBuf::from("./sentry_audit.jsonl")
-            };
+            let audit_log_path = PlatformPaths::default_audit_log_path();
+            if let Some(parent) = audit_log_path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
 
             let telemetry = TelemetryEngine::new(&active_label, false)
                 .with_file_sink(&audit_log_path)?;
@@ -219,7 +247,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 client_ui: None,
             };
             let what = WhatTelemetry {
-                summary: format!("Sentry Sentinel daemon initialized on node '{}'", active_label),
+                summary: format!("Sentry Sentinel daemon initialized on node '{}' [{}]", active_label, platform.display_summary()),
                 rms_db: Some(config.hardware.acoustic_baseline_db),
                 baseline_db: Some(config.hardware.acoustic_baseline_db),
                 delta_db: Some(0.0),
@@ -232,7 +260,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 duration_ps: timer.elapsed_picos(),
             };
             let how = HowProvenance {
-                protocol: "ALSA_PCM -> V4L2_MMAP -> SQLITE_WAL -> WSS_TLS".into(),
+                protocol: "HAL_DSP -> V4L2_MMAP -> SQLITE_WAL -> WSS_TLS".into(),
                 transport: "Local Hardware Loop".into(),
                 cipher: "ChaCha20-Poly1305 / HMAC-SHA256".into(),
                 compression: Some("zstd".into()),
@@ -248,6 +276,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             telemetry.log(SubsystemTag::SystemHeartbeat, Severity::Info, who.clone(), from.clone(), to.clone(), what, how.clone(), minutiae.clone())?;
 
             println!("  ✔ Telemetry Log Path    : {}", audit_log_path.display().to_string().green());
+            println!("  ✔ Active HAL Profile    : Audio [{:?}], Camera [{:?}]", sentinel.audio.driver_info().driver_type, sentinel.camera.driver_info().driver_type);
             println!("  ✔ Continuous Loop       : Active (Press Ctrl+C to stop)");
             println!("{}", "==========================================================================".cyan());
 
@@ -275,13 +304,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     _ = tokio::time::sleep(Duration::from_millis(1000)) => {
                         tick += 1;
-                        let samples = audio.capture_live_samples(1024);
-                        let measured_db = audio.sample_ambient_db().unwrap_or(analyzer.baseline_db);
+                        let samples = sentinel.audio.capture_live_samples(1024);
+                        let measured_db = sentinel.audio.sample_ambient_db().unwrap_or(analyzer.baseline_db);
 
                         if let Some(peak) = analyzer.ingest_samples(&samples) {
                             println!("{}", format!("🚨 [ACOUSTIC SPIKE DETECTED] Peak: {:.1} dB SPL (Δ +{:.1} dB)", peak, peak - analyzer.baseline_db).red().bold());
                             let burst_timer = PicoTimer::start();
-                            let burst = camera_sentinel.capture_burst(config.hardware.snapshot_burst_count).unwrap_or_default();
+                            let burst = sentinel.camera.capture_burst(config.hardware.snapshot_burst_count).unwrap_or_default();
                             let shutter_ns = burst_timer.elapsed_nanos();
                             let shutter_ps = burst_timer.elapsed_picos();
 
@@ -520,17 +549,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("{}", "✔ Chime complete!".green().bold());
         }
         Commands::Snapshot { camera, output } => {
+            let target_output = output.unwrap_or_else(|| std::env::temp_dir().join("sentry_snapshot.jpg"));
             println!("📸 Capturing snapshot from {}...", camera);
             let camera_sentinel = SentryCameraSentinel::new(camera);
             let frame = camera_sentinel.capture_frame()?;
-            std::fs::write(&output, frame)?;
-            println!("{}", format!("✔ Snapshot saved to {}", output).green().bold());
+            std::fs::write(&target_output, frame)?;
+            println!("{}", format!("✔ Snapshot saved to {}", target_output.display()).green().bold());
         }
         Commands::Report { output } => {
+            let target_output = output.unwrap_or_else(|| std::env::temp_dir().join("sentry_dossier.html"));
             println!("📊 Compiling security dossier...");
             let html = SentryReportEngine::generate_html_dossier(&config.node.label, 12)?;
-            std::fs::write(&output, html)?;
-            println!("{}", format!("✔ Report saved to {}", output).green().bold());
+            std::fs::write(&target_output, html)?;
+            println!("{}", format!("✔ Report saved to {}", target_output.display()).green().bold());
+        }
+        Commands::Profile => {
+            // Handled above in early return
         }
     }
 
