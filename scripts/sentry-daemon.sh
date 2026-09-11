@@ -76,12 +76,21 @@ case "$1" in
     ;;
 
   report)
-    REPORT_OUT="${2:-$HOME/sentry_endurance_report.html}"
-    "$SENTRY_BIN" report --output "$REPORT_OUT"
+    FORMAT="${2:-html}"
+    if [ -n "$3" ]; then
+      REPORT_OUT="$3"
+      "$SENTRY_BIN" report --format "$FORMAT" --output "$REPORT_OUT"
+    elif [[ "$2" == *"."* ]] || [[ "$2" == *"/"* ]]; then
+      REPORT_OUT="$2"
+      "$SENTRY_BIN" report --output "$REPORT_OUT"
+    else
+      REPORT_OUT="$HOME/sentry_endurance_report.$FORMAT"
+      "$SENTRY_BIN" report --format "$FORMAT" --output "$REPORT_OUT"
+    fi
     ;;
 
   *)
-    echo "Usage: sentry-daemon.sh {start|stop|status|logs [-f] [N]|stats|verify|report}"
+    echo "Usage: sentry-daemon.sh {start|stop|status|logs [-f] [N]|stats|verify|report [FORMAT] [OUT_PATH]}"
     exit 1
     ;;
 esac

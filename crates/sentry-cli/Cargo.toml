@@ -16,6 +16,7 @@ sentry-telepresence = { path = "../sentry-telepresence" }
 sentry-bridge = { path = "../sentry-bridge" }
 sentry-ledger = { path = "../sentry-ledger" }
 sentry-telemetry = { path = "../sentry-telemetry" }
+sentry-report = { path = "../sentry-report" }
 sentry-client = { path = "../sentry-client" }
 clap = { workspace = true }
 colored = { workspace = true }

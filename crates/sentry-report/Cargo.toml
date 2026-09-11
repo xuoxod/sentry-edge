@@ -1,0 +1,21 @@
+[package]
+name = "sentry-report"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Sentry Multi-Format Zero-CDN Human-Consumable Report Engine & Single Source of Truth Orchestrator"
+
+[dependencies]
+sentry-core = { path = "../sentry-core" }
+sentry-telemetry = { path = "../sentry-telemetry" }
+sentry-ledger = { path = "../sentry-ledger" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+rusqlite = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

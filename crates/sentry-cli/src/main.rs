@@ -11,7 +11,8 @@ use sentry_core::{
     SentryAlert, SentryIncidentType,
 };
 use sentry_hardware::{HardwareFactory, SentryAudioSentinel, SentryCameraSentinel, SentryHardwareSentinel};
-use sentry_ledger::{SentryLedgerDb, SentryReportEngine};
+use sentry_ledger::SentryLedgerDb;
+use sentry_report::{ReportFormat, ReportOrchestrator};
 use sentry_telemetry::{
     FromProvenance, HowProvenance, MinutiaeMetadata, PicoTimer, Severity, SubsystemTag,
     TelemetryEngine, TelemetryRecord, ToProvenance, WhatTelemetry, WhoProvenance,
@@ -128,10 +129,19 @@ enum Commands {
         #[arg(short, long)]
         output: Option<PathBuf>,
     },
-    /// Generate HTML / Markdown security dossier
+    /// Generate executive multi-format security & telemetry report (HTML, JSON, JSONL, CSV, Text, Markdown)
     Report {
+        /// Target export format: html (default), json, jsonl, csv, txt, md
+        #[arg(short, long)]
+        format: Option<String>,
+
+        /// Destination output file path (e.g. report.html, report.json, report.csv)
         #[arg(short, long)]
         output: Option<PathBuf>,
+
+        /// Print report directly to terminal stdout (useful for text/json/markdown)
+        #[arg(long)]
+        stdout: bool,
     },
     /// Inspect platform hardware profile & HAL driver mappings
     Profile,
@@ -623,12 +633,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             std::fs::write(&target_output, frame)?;
             println!("{}", format!("✔ Snapshot saved to {}", target_output.display()).green().bold());
         }
-        Commands::Report { output } => {
-            let target_output = output.unwrap_or_else(|| std::env::temp_dir().join("sentry_dossier.html"));
-            println!("📊 Compiling security dossier...");
-            let html = SentryReportEngine::generate_html_dossier(&config.node.label, 12)?;
-            std::fs::write(&target_output, html)?;
-            println!("{}", format!("✔ Report saved to {}", target_output.display()).green().bold());
+        Commands::Report { format, output, stdout } => {
+            let audit_path = PlatformPaths::default_audit_log_path();
+            let ledger_path = PathBuf::from(&config.storage.ledger_db_path);
+
+            let mut doc = ReportOrchestrator::from_jsonl_file(&audit_path, &config.node.label, &platform.display_summary())?;
+            if doc.metadata.total_records == 0 && ledger_path.exists() {
+                doc = ReportOrchestrator::from_ledger_db(&ledger_path, &config.node.label, &platform.display_summary())?;
+            }
+
+            let target_format = if let Some(fmt_str) = format {
+                fmt_str.parse::<ReportFormat>()?
+            } else if let Some(ref out_path) = output {
+                ReportOrchestrator::infer_format(out_path)
+            } else {
+                ReportFormat::Html
+            };
+
+            let rendered = ReportOrchestrator::render(&doc, target_format)?;
+
+            if stdout {
+                println!("{}", rendered);
+            } else {
+                let default_ext = match target_format {
+                    ReportFormat::Html => "html",
+                    ReportFormat::Json => "json",
+                    ReportFormat::Jsonl => "jsonl",
+                    ReportFormat::Csv => "csv",
+                    ReportFormat::Text => "txt",
+                    ReportFormat::Markdown => "md",
+                };
+                let target_output = output.clone().unwrap_or_else(|| {
+                    std::env::current_dir().unwrap_or_else(|_| std::env::temp_dir()).join(format!("sentry_report.{}", default_ext))
+                });
+
+                if let Some(parent) = target_output.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                std::fs::write(&target_output, &rendered)?;
+
+                println!("==========================================================================");
+                println!("🛡️  SENTRY-EDGE // EXECUTIVE DOSSIER GENERATED");
+                println!("  ✔ Target Format         : {:?}", target_format);
+                println!("  ✔ Verified Records      : {}", doc.metadata.total_records);
+                println!("  ✔ Hash Chain Status     : {}", if doc.metadata.is_chain_valid { "✔ 100% UNBROKEN".green().bold() } else { "❌ TAMPER DETECTED".red().bold() });
+                println!("  ✔ Destination File      : {}", target_output.display().to_string().cyan().bold());
+                println!("==========================================================================");
+            }
         }
         Commands::Profile => {
             // Handled above in early return
