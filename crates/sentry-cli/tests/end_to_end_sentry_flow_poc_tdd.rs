@@ -6,7 +6,8 @@ use sentry_core::{
     config::SentryConfig, AcousticAnalyzer, IncidentSeverity, SentryAlert, SentryIncidentType,
 };
 use sentry_hardware::{SentryAudioSentinel, SentryCameraSentinel};
-use sentry_ledger::{SentryLedgerDb, SentryReportEngine};
+use sentry_ledger::SentryLedgerDb;
+use sentry_report::{ReportFormat, ReportOrchestrator};
 use uuid::Uuid;
 
 #[test]
@@ -78,7 +79,8 @@ fn test_poc_end_to_end_acoustic_breach_to_client_delivery() {
     assert_eq!(ledger.count_alerts().unwrap(), 1);
 
     // 8. Generate Multi-Format HTML Security Dossier
-    let report_html = SentryReportEngine::generate_html_dossier(node_label, 1).unwrap();
+    let doc = ReportOrchestrator::from_records(node_label, "linux-x86_64", &[]);
+    let report_html = ReportOrchestrator::render(&doc, ReportFormat::Html).unwrap();
     assert!(report_html.contains("SENTRY-EDGE"));
     assert!(report_html.contains("hyperion-prime"));
 

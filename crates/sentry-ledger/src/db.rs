@@ -77,4 +77,29 @@ impl SentryLedgerDb {
             .map_err(|e| SentryError::Ledger(format!("Count error: {}", e)))?;
         Ok(count as usize)
     }
+
+    pub fn fetch_recent_alerts(&self, limit: usize) -> SentryResult<Vec<(String, String, String, String)>> {
+        let mut stmt = self.conn
+            .prepare("SELECT alert_id, severity, incident_type, description FROM sentry_alerts ORDER BY timestamp DESC LIMIT ?1")
+            .map_err(|e| SentryError::Ledger(format!("Prepare error: {}", e)))?;
+
+        let rows = stmt
+            .query_map(params![limit as i64], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                ))
+            })
+            .map_err(|e| SentryError::Ledger(format!("Query error: {}", e)))?;
+
+        let mut results = Vec::new();
+        for r in rows {
+            if let Ok(item) = r {
+                results.push(item);
+            }
+        }
+        Ok(results)
+    }
 }
