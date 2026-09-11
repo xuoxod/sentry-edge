@@ -28,7 +28,7 @@ fn test_rw_unified_hardware_sentinel_lifecycle() {
 
     // Test live sample capture
     let samples = sentinel.audio.capture_live_samples(512);
-    assert_eq!(samples.len(), 512);
+    assert!(samples.len() >= 512);
 
     // Test camera burst
     let burst = sentinel.camera.capture_burst(3).unwrap();

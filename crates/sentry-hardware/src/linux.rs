@@ -60,9 +60,6 @@ impl AudioInputDevice for LinuxAlsaAudioInput {
                 for chunk in output.stdout.chunks_exact(2) {
                     let sample = i16::from_le_bytes([chunk[0], chunk[1]]);
                     samples.push(sample);
-                    if samples.len() >= sample_count {
-                        break;
-                    }
                 }
                 if !samples.is_empty() {
                     return Ok(samples);

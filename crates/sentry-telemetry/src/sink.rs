@@ -73,6 +73,25 @@ impl FileSink {
         &self.path
     }
 
+    /// Read the last valid record from the audit file if it exists, enabling continuous hash chains
+    pub fn get_last_record(path: &Path) -> Option<TelemetryRecord> {
+        if !path.exists() {
+            return None;
+        }
+        let file = File::open(path).ok()?;
+        let reader = std::io::BufReader::new(file);
+        let mut last_record = None;
+        for line in std::io::BufRead::lines(reader).map_while(std::result::Result::ok) {
+            let trimmed = line.trim();
+            if !trimmed.is_empty() {
+                if let Ok(rec) = serde_json::from_str::<TelemetryRecord>(trimmed) {
+                    last_record = Some(rec);
+                }
+            }
+        }
+        last_record
+    }
+
     pub fn write_record(&self, record: &TelemetryRecord) -> Result<()> {
         let json_line = serde_json::to_string(record)?;
         let mut file = self.file.lock().unwrap();

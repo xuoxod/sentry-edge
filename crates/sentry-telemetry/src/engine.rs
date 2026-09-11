@@ -42,11 +42,28 @@ impl TelemetryEngine {
     }
 
     pub fn with_file_sink(mut self, path: &Path) -> Result<Self> {
+        if let Some(last_rec) = FileSink::get_last_record(path) {
+            *self.sequence.lock().unwrap() = last_rec.sequence;
+            *self.last_hash.lock().unwrap() = last_rec.record_hash;
+        }
         self.file_sink = Some(FileSink::new(path)?);
         Ok(self)
     }
 
     pub fn with_ledger_sink(mut self, conn: Arc<Mutex<Connection>>) -> Result<Self> {
+        {
+            let conn_guard = conn.lock().unwrap();
+            let stmt = conn_guard.prepare("SELECT sequence, record_hash FROM telemetry_audit_ledger ORDER BY sequence DESC LIMIT 1").ok();
+            if let Some(mut s) = stmt {
+                if let Ok(row) = s.query_row([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?))) {
+                    let mut seq_guard = self.sequence.lock().unwrap();
+                    if (row.0 as u64) > *seq_guard {
+                        *seq_guard = row.0 as u64;
+                        *self.last_hash.lock().unwrap() = row.1;
+                    }
+                }
+            }
+        }
         self.ledger_sink = Some(LedgerSink::new(conn)?);
         Ok(self)
     }
