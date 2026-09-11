@@ -33,6 +33,8 @@ impl ReportFormatter for HtmlReportFormatter {
 
         html.push_str("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n");
         html.push_str("<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
+        html.push_str("<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self' 'unsafe-inline' data:; frame-src 'none'; object-src 'none';\">\n");
+        html.push_str("<link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>\">\n");
         html.push_str(&format!("<title>SENTRY-EDGE // Dossier - {}</title>\n", report_id));
         html.push_str("<style>\n");
         html.push_str(r#"
@@ -275,16 +277,16 @@ impl ReportFormatter for HtmlReportFormatter {
         // Interactive Toolbar
         html.push_str("  <div class=\"timeline-toolbar\">\n");
         html.push_str("    <div class=\"filter-group\">\n");
-        html.push_str(&format!("      <button id=\"btn-filter-all\" class=\"filter-btn active\" onclick=\"filterTable('ALL')\">ALL ({})</button>\n", document.timeline.len()));
-        html.push_str(&format!("      <button id=\"btn-filter-alert\" class=\"filter-btn\" onclick=\"filterTable('ALERT')\">🚨 ALERTS ({})</button>\n", total_alerts));
-        html.push_str(&format!("      <button id=\"btn-filter-camera\" class=\"filter-btn\" onclick=\"filterTable('CAMERA')\">📷 CAMERA ({})</button>\n", total_bursts));
-        html.push_str("      <button id=\"btn-filter-audio\" class=\"filter-btn\" onclick=\"filterTable('AUDIO')\">🔊 AUDIO DSP</button>\n");
-        html.push_str("      <button id=\"btn-filter-security\" class=\"filter-btn\" onclick=\"filterTable('SECURITY')\">🔒 SECURITY</button>\n");
+        html.push_str(&format!("      <button type=\"button\" id=\"btn-filter-all\" class=\"filter-btn active\" onclick=\"filterTable('ALL')\">ALL ({})</button>\n", document.timeline.len()));
+        html.push_str(&format!("      <button type=\"button\" id=\"btn-filter-alert\" class=\"filter-btn\" onclick=\"filterTable('ALERT')\">🚨 ALERTS ({})</button>\n", total_alerts));
+        html.push_str(&format!("      <button type=\"button\" id=\"btn-filter-camera\" class=\"filter-btn\" onclick=\"filterTable('CAMERA')\">📷 CAMERA ({})</button>\n", total_bursts));
+        html.push_str("      <button type=\"button\" id=\"btn-filter-audio\" class=\"filter-btn\" onclick=\"filterTable('AUDIO')\">🔊 AUDIO DSP</button>\n");
+        html.push_str("      <button type=\"button\" id=\"btn-filter-security\" class=\"filter-btn\" onclick=\"filterTable('SECURITY')\">🔒 SECURITY</button>\n");
         html.push_str("    </div>\n");
         html.push_str("    <div style=\"display: flex; gap: 8px; align-items: center;\">\n");
         html.push_str("      <input type=\"text\" class=\"search-input\" placeholder=\"🔍 Filter by keyword, seq, hash...\" oninput=\"searchTable(this.value)\">\n");
-        html.push_str("      <button class=\"btn-action\" onclick=\"expandAll()\">➕ Expand All</button>\n");
-        html.push_str("      <button class=\"btn-action\" onclick=\"collapseAll()\">➖ Collapse All</button>\n");
+        html.push_str("      <button type=\"button\" class=\"btn-action\" onclick=\"expandAll()\">➕ Expand All</button>\n");
+        html.push_str("      <button type=\"button\" class=\"btn-action\" onclick=\"collapseAll()\">➖ Collapse All</button>\n");
         html.push_str("    </div>\n");
         html.push_str("  </div>\n");
 
@@ -355,8 +357,8 @@ impl ReportFormatter for HtmlReportFormatter {
             html.push_str(&format!("                  <span class=\"drawer-time\">Timestamp: <code>{}</code> (Unix: <code>{}ns</code>)</span>\n", escape_html(&ev.timestamp_utc), escape_html(&ev.timestamp_unix_ns)));
             html.push_str("                </div>\n");
             html.push_str("                <div style=\"display: flex; gap: 8px; align-items: center;\">\n");
-            html.push_str(&format!("                  <button class=\"btn-action\" onclick=\"event.stopPropagation(); copyText('{}')\">📋 Copy Hash</button>\n", escape_html(&ev.record_hash)));
-            html.push_str(&format!("                  <button class=\"btn-action\" onclick=\"event.stopPropagation(); toggleDrawer('drawer-{}')\">✕ Close</button>\n", ev.sequence));
+            html.push_str(&format!("                  <button type=\"button\" class=\"btn-action\" onclick=\"event.stopPropagation(); copyText('{}')\">📋 Copy Hash</button>\n", escape_html(&ev.record_hash)));
+            html.push_str(&format!("                  <button type=\"button\" class=\"btn-action\" onclick=\"event.stopPropagation(); toggleDrawer('drawer-{}')\">✕ Close</button>\n", ev.sequence));
             html.push_str("                </div>\n");
             html.push_str("              </div>\n");
 
