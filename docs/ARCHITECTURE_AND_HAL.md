@@ -1,14 +1,14 @@
-# 🏛️ SENTRY-EDGE: Architecture, Hardware Abstraction Layer (HAL) & Telemetry Specification
+# 🏛️ SENTRY-EDGE: Architecture, Hardware Abstraction Layer (HAL) & Report Engine Specification
 
 > **Document ID:** `SENTRY-DOC-ARCH-01`  
-> **Target Audience:** Core Contributors, System Architects, Security Auditors  
+> **Target Audience:** Core Contributors, System Architects, Security Auditors, Embedded Engineers  
 > **Status:** Production Reference Specification  
 
 ---
 
 ## 🧭 Multi-Crate Micro-OJP Taxonomy
 
-`sentry-edge` is architected strictly under the **One Job Principle (OJP)** across 8 standalone crates:
+`sentry-edge` is architected strictly under the **One Job Principle (OJP)** across 9 decoupled, modular workspace crates:
 
 ```
 sentry-edge/
@@ -16,15 +16,39 @@ sentry-edge/
 ├── crates/
 │   ├── sentry-core/            # DSP math, acoustic RMS, PlatformInfo, PlatformPaths, SentryAlert
 │   ├── sentry-hardware/        # Trait-based HAL: Linux (ALSA/V4L2), macOS, Windows, Procedural
-│   ├── sentry-telemetry/       # Picosecond timers, provenance model, SHA-256 hash-chain engine
+│   ├── sentry-telemetry/       # Picosecond timers, 5W1H model, rolling SHA-256 hash-chain engine
+│   ├── sentry-ledger/          # Embedded SQLite WAL incident database & CRUD sink
+│   ├── sentry-report/          # Decoupled SST report engine, narrative storyteller & 6 formatters
 │   ├── sentry-bridge/          # Outbound-only TLS WebSocket tunnel client for Conduit
 │   ├── sentry-telepresence/    # LiveKit SFU JWT generation & WebRTC 2-way intercom bridge
-│   ├── sentry-ledger/          # Embedded SQLite WAL incident database & HTML/SVG dossier renderer
 │   ├── sentry-client/          # Remote operator HUD and live alert ingestion client
-│   └── sentry-cli/             # Binary entrypoint: daemon, client, monitor, profile, logs
+│   └── sentry-cli/             # Binary entrypoint: daemon, client, monitor, profile, logs, report
 └── docs/
-    ├── OPERATOR_GUIDE.md       # Real-world field manual & operator playbook
-    └── ARCHITECTURE_AND_HAL.md # This architectural & HAL design specification
+    ├── OPERATOR_GUIDE.md       # Real-world field manual & operator playbook (SENTRY-DOC-OP-01)
+    ├── INSTALLATION_AND_UNINSTALLATION.md # Installation & purge guide (SENTRY-DOC-INST-01)
+    ├── DAEMON_AND_CLI_REFERENCE.md # Full command reference (SENTRY-DOC-CLI-01)
+    └── ARCHITECTURE_AND_HAL.md # This architectural specification (SENTRY-DOC-ARCH-01)
+```
+
+```mermaid
+graph TD
+    CLI["crates/sentry-cli<br/>(Binary Entrypoint)"] --> Core["crates/sentry-core<br/>(DSP Math & Models)"]
+    CLI --> HW["crates/sentry-hardware<br/>(Trait-Based HAL)"]
+    CLI --> Telem["crates/sentry-telemetry<br/>(5W1H & SHA-256 Engine)"]
+    CLI --> Ledger["crates/sentry-ledger<br/>(SQLite WAL Persistence)"]
+    CLI --> Report["crates/sentry-report<br/>(SST Report Engine)"]
+    CLI --> Bridge["crates/sentry-bridge<br/>(WSS Conduit Tunnel)"]
+    CLI --> Telep["crates/sentry-telepresence<br/>(LiveKit WebRTC Intercom)"]
+    CLI --> Client["crates/sentry-client<br/>(Operator Console HUD)"]
+
+    HW --> Core
+    Telem --> Core
+    Ledger --> Core
+    Report --> Telem
+    Report --> Core
+    Bridge --> Core
+    Telep --> Core
+    Client --> Bridge
 ```
 
 ---
@@ -82,29 +106,57 @@ classDiagram
     HardwareFactory ..> CameraDevice
 ```
 
-### Driver Dispatch Strategy
+### Driver Dispatch & Resilience Strategy
 1. **Compile-Time Dispatch**: Conditional compilation (`#[cfg(target_os = "...")]`) selects the host-native HAL drivers.
-2. **Runtime Auto-Detection**: If physical device nodes (e.g. `/dev/video0`, ALSA soundcard) are absent, busy, or unreadable due to container boundaries or permissions, the driver **gracefully falls back to procedural simulation** rather than panicking.
+2. **Runtime Auto-Detection & Procedural Fallback**: If physical device nodes (e.g. `/dev/video0`, ALSA soundcard) are busy, unplugged, or restricted by container boundaries, the driver **gracefully falls back to procedural simulation** rather than panicking.
 3. **Telemetry Tagging**: Every record contains the concrete `driver_type` (`Alsa`, `CoreAudio`, `Wasapi`, `ProceduralSynthetic`) for complete audit provenance.
 
 ---
 
-## ⏱️ Nanosecond / Picosecond Telemetry Engine (`sentry-telemetry`)
+## 📊 Single Source of Truth (SST) Report Engine (`sentry-report`)
 
-The telemetry engine delivers forensic-grade visibility into all edge operations:
+The decoupled report engine converts nanosecond/picosecond raw telemetry streams into human-consumable executive briefings across 6 distinct formats:
+
+```mermaid
+graph LR
+    Input["Telemetry Ingestion<br/>(JSONL Stream or SQLite DB)"] --> SST["SST ReportDocument Builder<br/>(Storyteller & Orchestrator)"]
+
+    SST --> HTML["HTML5 Zero-CDN Dashboard<br/>(Interactive Accordions & HUD Viewfinder)"]
+    SST --> TXT["ASCII Text Dossier<br/>(High-Impact Terminal Report)"]
+    SST --> MD["GitHub-Flavored Markdown<br/>(Operator Briefing)"]
+    SST --> CSV["RFC 4180 CSV<br/>(Formula Injection Safe)"]
+    SST --> JSON["Pretty JSON<br/>(REST API / Enterprise Ingest)"]
+    SST --> JSONL["JSONL / NDJSON<br/>(Streaming Telemetry)"]
+```
+
+### Supported Format Invariants:
+1. **HTML5 Zero-CDN Dashboard**:
+   * Pure inline CSS and standalone vanilla JavaScript.
+   * Strict `Content-Security-Policy` and embedded inline data-URI vector favicon preventing `file://` security origin errors.
+   * Interactive click-to-expand forensic accordion drawers with 5W1H micro-provenance, optical viewfinder frame simulation, and real-time category filters (`[ALL]`, `[ALERTS]`, `[CAMERA]`, `[AUDIO]`, `[SECURITY]`).
+2. **RFC 4180 CSV**:
+   * Automatic formula injection defense (sanitizes leading `=`, `+`, `-`, `@`, `\t`, `\r` characters with single quote escaping).
+3. **ASCII Text Dossier**:
+   * Clean table-wrapped ASCII layout for headless SSH terminals and operator teletypes.
+
+---
+
+## ⏱️ 5W1H Micro-Provenance & Telemetry Model (`sentry-telemetry`)
+
+Every operation on the edge is recorded with forensic-grade 5W1H provenance and picosecond execution timestamps:
 
 ```json
 {
-  "sequence": 42,
-  "timestamp_utc": "2026-09-11T01:10:52.533455681Z",
-  "timestamp_unix_ns": 1789089052533455681,
-  "node_id": "crunchbang-laptop",
+  "sequence": 10,
+  "timestamp_utc": "2026-09-11T01:35:45.928036810Z",
+  "timestamp_unix_ns": 1789090545928036810,
+  "node_id": "Server-Room-Sentinel (hyperion-prime)",
   "subsystem": "CameraV4l2",
   "severity": "Alert",
   "who": {
     "identity": "sentry-daemon",
     "token_prefix": "sentry-dev-99x",
-    "session_id": "850ad835-1ca3-4ccc-ab9a-a3ff386f1e18",
+    "session_id": "5560e215-83cd-48d9-9b1e-1d865180f104",
     "peer_id": null
   },
   "from": {
@@ -116,21 +168,21 @@ The telemetry engine delivers forensic-grade visibility into all edge operations
   "to": {
     "destination_hardware": "/dev/video0",
     "remote_relay": "wss://relay.example.com:8084/ws/outpost",
-    "database_wal": "/home/rick/.config/sentry/data/sentry_ledger.db",
+    "database_wal": "./data/sentry_ledger.db",
     "client_ui": null
   },
   "what": {
-    "summary": "Acoustic spike breach detected: 91.4 dB SPL (+26.3 dB over baseline)",
-    "rms_db": 91.4,
-    "baseline_db": 65.1,
-    "delta_db": 26.3,
+    "summary": "Acoustic spike breach detected: 86.2 dB SPL (+33.7 dB over baseline)",
+    "rms_db": 86.22434,
+    "baseline_db": 52.529,
+    "delta_db": 33.695343,
     "frames_captured": 5,
-    "shutter_latency_ns": 1420000,
-    "shutter_latency_ps": 1420000000,
-    "payload_bytes": 35840,
-    "payload_sha256": "e4f89a2bc912384a...",
-    "duration_ns": 1425000,
-    "duration_ps": 1425000000
+    "shutter_latency_ns": 54476,
+    "shutter_latency_ps": 54560000,
+    "payload_bytes": 435,
+    "payload_sha256": "b169c072f5723e867cba640bf7a3e39cc3ea96c00f9b8418b36d130abab3786d",
+    "duration_ns": 54476,
+    "duration_ps": 54560000
   },
   "how": {
     "protocol": "HAL_DSP -> V4L2_MMAP -> SQLITE_WAL -> WSS_TLS",
@@ -141,47 +193,30 @@ The telemetry engine delivers forensic-grade visibility into all edge operations
   "minutiae": {
     "cpu_rss_mb": 18.2,
     "dsp_ema_alpha": 0.15,
-    "wal_page_count": 4,
+    "wal_page_count": 1,
     "sqlite_commit_ns": 25000,
     "network_rtt_ms": 1.0
   },
-  "prev_record_hash": "a43b45829f049aba6ad7cb6adce8b4de96c1cf6d370e7d5983104b8dfb036e54",
-  "record_hash": "df9f58d37bc5a434da9c27f51b178b16b754cfb022866d20b16ee6ebddcfa2a5"
+  "prev_record_hash": "f769010900b97acdbbed20919e3e946d0005aad6df32fc1178315f6d3d6194dd",
+  "record_hash": "68fd3966aa0f815d86aca949c640e1aa0043a4370de7ccfe7334e0df7a89adbe"
 }
 ```
 
-### Cryptographic Hash Chain Mechanics
-$$\text{RecordHash}_N = \text{SHA256}(\text{Sequence}_N \parallel \text{TimestampNs}_N \parallel \text{Summary}_N \parallel \text{PrevRecordHash}_{N-1})$$
-
-* **Genesis Block**: Sequence 1 uses `prev_record_hash = "0000000000000000000000000000000000000000000000000000000000000000"`.
-* **Tamper Evident**: Modifying any field (e.g. dB level, timestamp) or deleting a line invalidates all subsequent hash links across the entire chain.
-* **Verification Algorithm**: `TelemetryRecord::verify_chain(&records)` validates $100\%$ of hash links in $O(N)$ time.
-
 ---
 
-## 🔒 Static Musl Zero-GLIBC Cross-Compilation
+## 🔐 Rolling SHA-256 Blockchain Hash-Chain Engine
 
-To guarantee zero dependency on host glibc versions across heterogeneous Linux distros:
+Telemetry records form a continuous, cryptographically chained sequence:
 
-### `.cargo/config.toml`
-```toml
-[target.x86_64-unknown-linux-musl]
-rustflags = ["-C", "target-feature=+crt-static"]
-
-[target.aarch64-unknown-linux-musl]
-rustflags = ["-C", "target-feature=+crt-static"]
+```mermaid
+graph LR
+    Genesis["Genesis Block<br/>PREV: 0000...0000"] --> Rec1["Record #1<br/>HASH: f7690109..."]
+    Rec1 --> Rec2["Record #2 (Spike Alert)<br/>PREV: f7690109...<br/>HASH: 68fd3966..."]
+    Rec2 --> Rec3["Record #3<br/>PREV: 68fd3966...<br/>HASH: e04d7caa..."]
+    Rec3 --> RecN["Record #N (Terminal)<br/>100% Tamper-Evident Verified"]
 ```
 
-### Build Invocation
-```bash
-cargo build --release --target x86_64-unknown-linux-musl
-```
+### Mathematical Verification Invariant:
+$$\text{Record Hash}_k = \text{SHA256}\Big(\text{seq}_k \,\|\, \text{unix\_ns}_k \,\|\, \text{node\_id} \,\|\, \text{subsystem} \,\|\, \text{severity} \,\|\, \text{summary} \,\|\, \text{payload\_sha256} \,\|\, \text{duration\_ns} \,\|\, \text{Record Hash}_{k-1}\Big)$$
 
-### Binary Verification
-```bash
-$ file target/x86_64-unknown-linux-musl/release/sentry-edge
-ELF 64-bit LSB pie executable, x86-64, statically linked, not stripped
-
-$ ldd target/x86_64-unknown-linux-musl/release/sentry-edge
-statically linked
-```
+If any record is modified, reordered, or deleted in the log file, `sentry-edge logs --verify-chain` detects the break at $O(N)$ speed and isolates the exact tampering sequence.

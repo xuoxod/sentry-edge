@@ -19,10 +19,10 @@
 
 ## 📚 Dedicated Documentation & Field Manuals
 
-* 📖 [**Comprehensive Operator Guide & Field Manual**](docs/OPERATOR_GUIDE.md): Real-world deployment walkthrough, ambient TV DSP adaptation, acoustic spike mechanics, and the *"If You Wanted to Know / See If..."* operator playbook.
-* 🛠️ [**Exhaustive Daemon & CLI Reference Manual**](docs/DAEMON_AND_CLI_REFERENCE.md): Full command-by-command reference for `sentry-daemon.sh` (`start|stop|status|logs|stats|verify|report`) and all `sentry-edge` CLI subcommands with internal mechanics and real-world failure recovery.
-* 🏛️ [**Architecture & HAL Specification**](docs/ARCHITECTURE_AND_HAL.md): Trait-based Hardware Abstraction Layer, multi-OS drivers (Linux, macOS, Windows, Procedural), static-musl zero-glibc compilation, and nanosecond/picosecond cryptographic hash-chain engine.
-
+* 📖 [**Comprehensive Operator Guide & Field Manual**](docs/OPERATOR_GUIDE.md) (`SENTRY-DOC-OP-01`): Real-world soak deployment walkthrough, 119 verified records, ambient TV/Echo DSP adaptation, handclap spike mechanics (86.2 dB SPL), and the *"If You Wanted to Know / See If..."* operator playbook.
+* 📦 [**Installation & Uninstallation Manual**](docs/INSTALLATION_AND_UNINSTALLATION.md) (`SENTRY-DOC-INST-01`): Multi-OS system requirements, static Musl deployment, background daemon supervision, systemd unit integration, and complete clean purge procedures.
+* 🛠️ [**Exhaustive Daemon & CLI Reference Manual**](docs/DAEMON_AND_CLI_REFERENCE.md) (`SENTRY-DOC-CLI-01`): Full command-by-command reference for `sentry-daemon.sh` (`start|stop|status|logs|stats|verify|report`) and all `sentry-edge` CLI subcommands with internal mechanics and real-world failure recovery.
+* 🏛️ [**Architecture, HAL & Report Engine Specification**](docs/ARCHITECTURE_AND_HAL.md) (`SENTRY-DOC-ARCH-01`): 9-crate micro-OJP taxonomy, trait-based HAL, single-source-of-truth (SST) report orchestrator, 5W1H provenance model, and rolling SHA-256 blockchain hash-chain engine.
 
 ---
 
@@ -36,6 +36,7 @@ Commercial security cameras (Ring, Nest, Wyze, Arlo) force an unacceptable priva
 * 📸 **V4L2 Burst Sentinel**: Automatically triggers a 5-frame 1080p JPEG burst upon acoustic breach with hardware LED isolation (camera powers down immediately after frame release).
 * ⚡ **Sub-10ms LiveKit SFU Telepresence**: Stream real-time 60FPS video and two-way walkie-talkie intercom directly to any mobile phone browser worldwide.
 * ⏱️ **Nanosecond / Picosecond Provenance**: Meticulous telemetry tracking (`Who`, `From`, `To`, `What`, `How`, `Minutiae`) sealed with an immutable cryptographic SHA-256 blockchain hash chain.
+* 📊 **Decoupled SST Report Engine**: Exports self-contained, zero-CDN interactive HTML dashboards, ASCII text dossiers, RFC 4180 CSV, JSON, and Markdown briefs.
 * 🔬 **Trait-Based HAL**: Native Linux ALSA & V4L2, macOS CoreAudio & AVFoundation, Windows WASAPI & MediaFoundation, with automatic procedural simulation fallback.
 * 📦 **100% Platform-Agnostic Static Binary**: Built with `x86_64-unknown-linux-musl` and `crt-static`, eliminating all `GLIBC_X.XX not found` library mismatches.
 
@@ -73,6 +74,18 @@ graph TD
 
 ---
 
+## ⚙️ System Requirements
+
+| Component | Minimum Specification | Recommended Specification |
+| :--- | :--- | :--- |
+| **CPU Architecture** | `x86_64` or `aarch64` | Multi-core x86_64 or Raspberry Pi 4/5 |
+| **Memory (RAM)** | $\ge 32\text{ MB}$ total system RAM | $\ge 64\text{ MB}$ total system RAM |
+| **Process Footprint** | **$\approx 5.8\text{ MB} - 6.2\text{ MB}$ RSS** | Peak Burst: $7.1\text{ MB}$ RSS |
+| **Supported OS** | Linux 2.6+, macOS 11+, Windows 10+, FreeBSD 13+ | Modern Linux (Ubuntu, Debian, Alpine, Arch) |
+| **Sensors** | Audio input device (ALSA/WASAPI/CoreAudio) | UVC-compliant USB Webcam (`/dev/video0`) + Mic |
+
+---
+
 ## 🚀 Quickstart & Usage
 
 ### 1. Build Zero-Dependency Static Release Binary
@@ -98,79 +111,42 @@ file target/x86_64-unknown-linux-musl/release/sentry-edge
 ./target/x86_64-unknown-linux-musl/release/sentry-edge run \
     --relay-url wss://relay.example.com:8084/ws/outpost \
     --token sentry-dev-99x \
-    --label "crunchbang-laptop" \
+    --label "Server-Room-Sentinel" \
     --camera /dev/video0 \
     --trigger-db 20.0
 ```
 
 ---
 
-### 4. Connect Remote Operator Client
+### 4. Generate Multi-Format Dossiers
 ```bash
-./target/x86_64-unknown-linux-musl/release/sentry-edge client \
-    --relay-url wss://relay.example.com:8084/ws/operator \
-    --operator "Operator-Rick" \
-    --watch-node "crunchbang-laptop"
+# Generate interactive zero-CDN HTML dashboard with expandable forensic drawers:
+./target/x86_64-unknown-linux-musl/release/sentry-edge report --format html --output sentry_report.html
+
+# Generate high-impact ASCII plain text dossier for terminal inspection:
+./target/x86_64-unknown-linux-musl/release/sentry-edge report --format txt --output sentry_report.txt
 ```
 
 ---
 
-### 5. Essential Operator Commands
+## 🧩 Workspace Crate Taxonomy (Micro-OJP)
 
-| Task | Command |
+| Crate | Responsibility & Invariant |
 | :--- | :--- |
-| **Real-Time Sound Meter HUD** | `sentry-edge monitor` |
-| **Test Warning Siren / Chime** | `sentry-edge test-chime` |
-| **Capture Instant Snapshot** | `sentry-edge snapshot --camera /dev/video0 --output /tmp/test.jpg` |
-| **Inspect Nanosecond Logs** | `sentry-edge logs --tail 20` |
-| **Verify SHA-256 Hash Chain** | `sentry-edge logs --verify-chain` |
-| **View Telemetry Statistics** | `sentry-edge logs --stats` |
-| **Export HTML Dossier** | `sentry-edge report --output /tmp/sentry_dossier.html` |
+| [`crates/sentry-core`](crates/sentry-core) | Core DSP math, acoustic RMS, platform paths, configuration parser, and alert models. |
+| [`crates/sentry-hardware`](crates/sentry-hardware) | Trait-based Hardware Abstraction Layer (HAL) for Linux (ALSA/V4L2), macOS, Windows, and Procedural fallback. |
+| [`crates/sentry-telemetry`](crates/sentry-telemetry) | Picosecond timers, 5W1H micro-provenance, and immutable rolling SHA-256 blockchain hash-chain engine. |
+| [`crates/sentry-ledger`](crates/sentry-ledger) | Embedded SQLite WAL incident database and persistence sink. |
+| [`crates/sentry-report`](crates/sentry-report) | Decoupled Single Source of Truth (SST) report orchestrator, narrative storyteller, and 6 multi-format exporters. |
+| [`crates/sentry-bridge`](crates/sentry-bridge) | Outbound-only TLS WebSocket tunnel client for Conduit relays. |
+| [`crates/sentry-telepresence`](crates/sentry-telepresence) | LiveKit SFU JWT generation and sub-10ms WebRTC 2-way walkie-talkie intercom bridge. |
+| [`crates/sentry-client`](crates/sentry-client) | Remote operator HUD and live incoming alert ingestion console. |
+| [`crates/sentry-cli`](crates/sentry-cli) | Main binary entrypoint supporting daemon, client, monitor, profile, logs, and report subcommands. |
 
 ---
 
-## 💡 The "If You Wanted to Know..." Quick Reference
+## 📄 License
 
-* **If you want to know if the sentinel is actively listening:** Run `sentry-edge monitor`.
-* **If you want to see if an acoustic spike was triggered:** Run `sentry-edge logs --tail 10` or check `sentry-daemon.stdout`.
-* **If you want to verify that no logs were modified or tampered with:** Run `sentry-edge logs --verify-chain`.
-* **If you want to view detected OS, CPU arch, and active HAL drivers:** Run `sentry-edge --profile`.
-* **If you want to customize trigger thresholds or database paths:** Edit `~/.config/sentry/sentry.toml`.
-
----
-
-## 🧩 Micro-OJP Multi-Crate Layout
-
-```
-sentry-edge/
-├── Cargo.toml                  # Standalone workspace definition (Zero local path dependencies)
-├── .cargo/config.toml          # Static-musl crt-static configuration
-├── crates/
-│   ├── sentry-core/            # Pure DSP acoustic math, PlatformInfo, PlatformPaths, SentryAlert
-│   ├── sentry-hardware/        # Trait-based HAL: Linux (ALSA/V4L2), macOS, Windows, Procedural
-│   ├── sentry-telemetry/       # Picosecond timers, provenance model, SHA-256 hash-chain engine
-│   ├── sentry-bridge/          # Outbound TLS WebSocket connector linking Sentry to Conduit
-│   ├── sentry-telepresence/    # Real-time WebRTC LiveKit SFU integration & 2-way intercom
-│   ├── sentry-ledger/          # SQLite WAL incident persistence & SVG report engine
-│   ├── sentry-client/          # End-user remote operator application & alert viewer
-│   └── sentry-cli/             # Standalone operator CLI, audio meter & daemon binary
-└── docs/
-    ├── OPERATOR_GUIDE.md       # Complete real-world field manual & operator playbook
-    └── ARCHITECTURE_AND_HAL.md # Architectural & Hardware Abstraction Layer specification
-```
-
----
-
-## 🧪 Test Battery & Verification
-
-```bash
-cargo test --workspace
-# 47 / 47 Tests Passed (100% Success) across 8 Micro-OJP crates
-```
-
----
-
-## 📜 Governance & License
-
-Crafted with sovereign pride by **Rick (`xuoxod`)**.  
-Licensed under the [MIT License](LICENSE-MIT) or [Apache-2.0 License](LICENSE-APACHE).
+Licensed under either of:
+* Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+* MIT License ([LICENSE-MIT](LICENSE-MIT))
