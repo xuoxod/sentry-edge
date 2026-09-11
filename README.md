@@ -19,8 +19,10 @@
 
 ## 📚 Dedicated Documentation & Field Manuals
 
-* 📖 [**Comprehensive Operator Guide & Field Manual**](docs/OPERATOR_GUIDE.md): Real-world deployment walkthrough, ambient TV DSP adaptation, acoustic spike mechanics, daemon management (`sentry-daemon.sh`), and the *"If You Wanted to Know / See If..."* operator playbook.
+* 📖 [**Comprehensive Operator Guide & Field Manual**](docs/OPERATOR_GUIDE.md): Real-world deployment walkthrough, ambient TV DSP adaptation, acoustic spike mechanics, and the *"If You Wanted to Know / See If..."* operator playbook.
+* 🛠️ [**Exhaustive Daemon & CLI Reference Manual**](docs/DAEMON_AND_CLI_REFERENCE.md): Full command-by-command reference for `sentry-daemon.sh` (`start|stop|status|logs|stats|verify|report`) and all `sentry-edge` CLI subcommands with internal mechanics and real-world failure recovery.
 * 🏛️ [**Architecture & HAL Specification**](docs/ARCHITECTURE_AND_HAL.md): Trait-based Hardware Abstraction Layer, multi-OS drivers (Linux, macOS, Windows, Procedural), static-musl zero-glibc compilation, and nanosecond/picosecond cryptographic hash-chain engine.
+
 
 ---
 
