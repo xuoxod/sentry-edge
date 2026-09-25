@@ -42,6 +42,36 @@ Commercial security cameras (Ring, Nest, Wyze, Arlo) force an unacceptable priva
 
 ---
 
+## ⚡ The Sovereign Frontier: Emancipation from Cloud Surveillance Feudalism
+
+Commercial surveillance hardware companies have created a subscription lock-in racket: you purchase physical cameras, but you don't own the data, you can't run custom edge logic, and your private audio/video streams are uploaded to corporate servers with mandatory monthly recurring fees.
+
+`sentry-edge` delivers the frontier alternative for physical spaces:
+* **0 Cloud Subscriptions**: Runs on your own Linux hardware (Raspberry Pi, workstation, mini-PC).
+* **0 Inbound Ports**: Dials out directly over encrypted TLS WebSockets to your own private sovereign relay.
+* **100% Cryptographic Provenance**: Every acoustic spike and snapshot burst is sealed with an immutable SHA-256 blockchain hash chain that you own forever.
+
+```mermaid
+flowchart LR
+    subgraph SurveillanceEmpire ["🏰 Cloud Surveillance Monopoly (The Old Empire)"]
+        direction TB
+        VendorCam["Ring / Nest / Wyze Cameras\n💸 $10 - $50/mo per-camera subscription"]
+        CloudStream["Mandatory Cloud Uploads\n👁️ Private audio/video parsed on vendor servers"]
+        InboundHoles["Open Inbound NAT Holes\n⚠️ Vulnerable to IoT botnets & credential stuffing"]
+    end
+
+    subgraph SentryFrontier ["⚡ Sovereign Telepresence (Sentry-Edge)"]
+        direction TB
+        ZeroCost["Self-Hosted Commodity Hardware\n💎 $0.00 / Zero Subscriptions Forever"]
+        LocalAudit["Local Immutable SHA-256 Chain\n⛓️ Cryptographic Forensic Provenance"]
+        OutboundMesh["Zero Inbound Ports\n🛡️ Outward-Only Encrypted TLS / LiveKit SFU"]
+    end
+
+    SurveillanceEmpire -.->|"Physical Emancipation"| SentryFrontier
+```
+
+---
+
 ## 🏗️ Ecosystem Architecture
 
 ```mermaid
