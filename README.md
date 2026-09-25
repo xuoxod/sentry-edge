@@ -70,6 +70,10 @@ flowchart LR
     SurveillanceEmpire -.->|"Physical Emancipation"| SentryFrontier
 ```
 
+### 🧬 Sovereign Provenance: The Human-AI Vanguard
+
+`sentry-edge` was forged through rigorous human-AI pair programming, pairing human standards of physical privacy and zero-cloud reliance with agentic verification. From trait-based HAL abstraction across Linux, macOS, and Windows to sub-10ms WebRTC pipeline orchestration and immutable SHA-256 blockchain hashing, the codebase proves that independent developers pairing with an AI thinking partner can out-build multi-million dollar corporate hardware surveillance ecosystems.
+
 ---
 
 ## 🏗️ Ecosystem Architecture
