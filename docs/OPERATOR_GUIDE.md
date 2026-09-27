@@ -1,7 +1,7 @@
 # 🛡️ SENTRY-EDGE: Comprehensive Operator Guide & Real-World Field Manual
 
 > **Document ID:** `SENTRY-DOC-OP-01`  
-> **Target Audience:** Edge Operators, Homelab Administrators, Security Engineers, Sovereign Conduit Users  
+> **Target Audience:** Edge Operators, Homelab Administrators, Systems Engineers  
 > **Scope:** Real-World Hardware Deployment, Acoustic DSP Adaptation, Telemetry Auditing, Operator Playbook & Troubleshooting  
 
 ---
@@ -19,11 +19,11 @@ This manual provides real-world operational guidance, exact measured telemetry b
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Mic as 🎙️ ALSA/WASAPI Mic
+    participant Mic as 🎙️ Physical Audio Sensor
     participant DSP as 🎛️ Acoustic DSP Analyzer
-    participant Cam as 📸 V4L2 Camera Sensor
-    participant Ledger as 💾 SQLite WAL Ledger
-    participant Bridge as 🌐 Conduit WSS Relay
+    participant Cam as 📸 Camera Capture Sensor
+    participant Ledger as 💾 Embedded WAL Ledger
+    participant Bridge as 🌐 Outbound WSS Relay
     participant Log as ⛓️ SHA-256 Telemetry Log
 
     Note over Mic,DSP: Continuous Sliding RMS Window (48kHz)
@@ -36,7 +36,7 @@ sequenceDiagram
         Note over DSP: Spike Trigger Detected (e.g. 86.2 dB SPL, +33.7 dB Δ)
         DSP->>Cam: Trigger instant 5-frame optical burst
         Cam->>Cam: Zero-copy MMAP shutter (54.48 µs latency)
-        Cam->>Ledger: Commit SentryAlert to SQLite WAL (25.0 µs commit)
+        Cam->>Ledger: Commit SentryAlert to WAL Ledger (25.0 µs commit)
         Cam->>Bridge: Dispatch signed alert with base64 preview frame
         Cam->>Log: Append 5W1H record & seal rolling SHA-256 hash
     end
@@ -62,7 +62,7 @@ When `sentry-edge` boots, it immediately connects to the host audio input device
   ✔ Acoustic Trigger Delta: +20.0 dB SPL
 ==========================================================================
 ▶ Sentinel armed. Monitoring acoustic baseline & camera...
-  ✔ Telemetry Log Path    : /home/rick/.config/sentry/logs/sentry_audit.jsonl
+  ✔ Telemetry Log Path    : ~/.config/sentry/logs/sentry_audit.jsonl
   ✔ Active HAL Profile    : Audio [Alsa], Camera [V4l2]
   ✔ Continuous Loop       : Active (Press Ctrl+C to stop)
 ==========================================================================
@@ -71,16 +71,16 @@ When `sentry-edge` boots, it immediately connects to the host audio input device
 #### How the Audio DSP Analyzer Works:
 * **Sound Pressure Level Reference**: Audio samples are converted to calibrated Root-Mean-Square (RMS) decibels sound pressure level ($\text{dB SPL}$).
   * **Quiet Room / Ambient Whisper**: $\approx 30 - 45\text{ dB SPL}$
-  * **Normal TV / Background Music (4 Amazon Echos)**: $\approx 60 - 76\text{ dB SPL}$
-  * **Sudden Impulse Noise (Handclap, Door Slam, Intrusion)**: $\approx 85 - 105+\text{ dB SPL}$
-* **Exponential Moving Average (EMA)**: The baseline noise level dynamically adapts to constant environmental background sounds using an EMA smoothing factor ($\alpha = 0.15$). If music or HVAC is running in the room, the sentinel establishes the ambient volume as the new baseline over several seconds rather than triggering false alarms.
+  * **Normal TV / Background Audio**: $\approx 60 - 76\text{ dB SPL}$
+  * **Sudden Impulse Noise (Handclap, Door Slam, Forced Entry)**: $\approx 85 - 105+\text{ dB SPL}$
+* **Exponential Moving Average (EMA)**: The baseline noise level dynamically adapts to constant environmental background sounds using an EMA smoothing factor ($\alpha = 0.15$). If background audio or HVAC is running in the room, the sentinel establishes the ambient volume as the new baseline over several seconds rather than triggering false alarms.
 * **Trigger Threshold**: When a sudden acoustic jump occurs ($\Delta \ge +20\text{ dB SPL}$ above the adapted baseline), the sentinel instantly flags an acoustic breach.
 
 ---
 
 ### 2. Live Soak Test Ground Truth: What Happens During an Incident
 
-During real-world testing across an edge hardware node (`node-02-edge`), the sentinel recorded **119 verified events** with background music playing from multiple smart speakers:
+During real-world testing across an edge hardware node (`node-02-edge`), the sentinel recorded **119 verified events** with ambient background sound:
 
 ```text
   [dB Monitor #110]: Current  74.8 dB | Baseline:  75.2 dB  ██████████████
@@ -89,15 +89,15 @@ During real-world testing across an edge hardware node (`node-02-edge`), the sen
 🚨 [ACOUSTIC SPIKE DETECTED] Peak: 86.2 dB SPL (Δ +33.7 dB)
   📸 Capturing 5-frame optical burst from /dev/video0... (Shutter: 54,476 ns / 54,560,000 ps)
   🔐 Computing SHA-256 event signature: b169c072f5723e867cba640bf7a3e39cc3ea96c00f9b8418b36d130abab3786d
-  💾 Persisting alert to SQLite WAL Ledger (Commit: 25,000 ns)
-  📡 Dispatching cryptographically signed SentryAlert over Conduit WSS Bridge
+  💾 Persisting alert to Embedded WAL Ledger (Commit: 25,000 ns)
+  📡 Dispatching cryptographically signed SentryAlert over Outbound WSS Bridge
   ⛓️ Appending nanosecond telemetry record to cryptographic SHA-256 hash chain
 --------------------------------------------------------------------------
 ```
 
 #### Provenance & Minutiae Telemetry Captured:
 * **Measured Shutter Latency**: `54,476 ns` (`54.48 µs` / `54,560,000 ps`).
-* **SQLite WAL Commit Time**: `25,000 ns` (`25.0 µs`).
+* **Embedded WAL Commit Time**: `25,000 ns` (`25.0 µs`).
 * **Process RSS Memory**: `6.1 MB` total resident memory.
 * **Payload Hash**: `b169c072...` (435 bytes).
 * **Cryptographic Continuity**: Verified 100% unbroken across 119 consecutive blocks.
@@ -135,7 +135,7 @@ sentry-edge logs --tail 5
   ✔ Platform Runtime      : linux-x86_64 (family: unix, musl: true, container: false)
 ==========================================================================
   ✔ [MODE]                : HYPER-METICULOUS NANOSECOND TELEMETRY AUDIT
-  ✔ Log Source            : /home/rick/.config/sentry/logs/sentry_audit.jsonl
+  ✔ Log Source            : ~/.config/sentry/logs/sentry_audit.jsonl
 ==========================================================================
 01:35:13.073677339 [INFO ] [AUDIO_DSP] Periodic ambient acoustic baseline: 52.0 dB SPL [RMS: 56.3dB, Base: 52.0dB, Δ: +4.3dB] #9
 01:35:45.928036810 [ALERT] [CAMERA_V4L2] Acoustic spike breach detected: 86.2 dB SPL (+33.7 dB over baseline) [RMS: 86.2dB, Base: 52.5dB, Δ: +33.7dB] (took 54476ns / 54560000ps) #10
@@ -173,9 +173,9 @@ sentry-edge --profile
   ✔ CPU Architecture      : x86_64
   ✔ Static Musl Binary    : YES (Static Linked)
   ✔ Container Environment : NO (Bare Metal Hardware)
-  ✔ Config Path           : /home/rick/.config/sentry/sentry.toml
-  ✔ Ledger Database       : /home/rick/.config/sentry/data/sentry_ledger.db
-  ✔ Audit Log Path        : /home/rick/.config/sentry/logs/sentry_audit.jsonl
+  ✔ Config Path           : ~/.config/sentry/sentry.toml
+  ✔ Ledger Database       : ~/.config/sentry/data/sentry_ledger.db
+  ✔ Audit Log Path        : ~/.config/sentry/logs/sentry_audit.jsonl
 --------------------------------------------------------------------------
   🔊 Audio Input Driver   : Alsa -> Native Linux ALSA Sound Card
   📢 Audio Output Driver  : Alsa -> Linux ALSA Audio Output Transducer
@@ -201,7 +201,7 @@ sentry-edge report --format jsonl --output sentry_report.jsonl
 ## 🔧 Environmental Tuning & Troubleshooting
 
 ### Adjusting Acoustic Trigger Sensitivity
-If background television or HVAC causes false triggers, or if you need to detect fainter sounds:
+If background environmental audio causes false triggers, or if you need to detect fainter sounds:
 1. Open `~/.config/sentry/sentry.toml`.
 2. Modify `acoustic_trigger_delta_db`:
    ```toml

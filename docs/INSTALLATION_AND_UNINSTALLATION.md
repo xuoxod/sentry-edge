@@ -24,7 +24,7 @@
 | **Storage (Disk)** | $\ge 20\text{ MB}$ free disk space | $\ge 100\text{ MB}$ free disk space (for extended WAL logs) |
 | **Microphone Sensor** | Built-in laptop mic, USB webcam mic, or 3.5mm ALSA input | Dedicated directional USB microphone / array |
 | **Camera Sensor** | USB V4L2 Webcam (`/dev/video0`) or Built-in Camera | 720p/1080p UVC Compliant Webcam |
-| **Network** | Outbound-only internet connection ($\ge 64\text{ kbps}$) | Stable LAN/Wi-Fi connection to Conduit Relay |
+| **Network** | Outbound-only internet connection ($\ge 64\text{ kbps}$) | Stable LAN/Wi-Fi connection to Outbound Relay Gateway |
 
 ### 1.2 Operating System & Kernel Support
 
@@ -85,7 +85,7 @@ graph TD
    ```
    **Expected Output:**
    ```text
-   /home/rick/.local/bin/sentry-edge: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), statically linked, stripped
+   /home/operator/.local/bin/sentry-edge: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), statically linked, stripped
    ```
 
 ---
@@ -137,7 +137,7 @@ For edge deployments requiring background execution, log rotation, and soak test
    ```text
    🟢 Sentry Daemon is RUNNING (PID: 1010041)
        PID USER     %CPU %MEM   RSS     ELAPSED COMMAND
-   1010041 rick      0.0  0.1  6160       12:34 /home/rick/.local/bin/sentry-edge run
+   1010041 operator  0.0  0.1  6160       12:34 /home/operator/.local/bin/sentry-edge run
    ```
 
 ---
@@ -193,11 +193,11 @@ For edge devices requiring automatic start on boot and crash recovery:
    ==========================================================================
    ⚙️   SENTRY-EDGE // CONFIGURATION GENERATOR
    ==========================================================================
-     ✔ Target File Path      : /home/rick/.config/sentry/sentry.toml
+     ✔ Target File Path      : /home/operator/.config/sentry/sentry.toml
      ✔ Platform Profile      : linux-x86_64 (family: unix, musl: true, container: false)
      ✔ Template Status       : Successfully Generated Starter Configuration
    ==========================================================================
-   ℹ️  Edit /home/rick/.config/sentry/sentry.toml to customize your backend relay and camera devices.
+   ℹ️  Edit /home/operator/.config/sentry/sentry.toml to customize your backend relay and camera devices.
    ```
 
 2. **Directory & File Hierarchy**:
@@ -205,7 +205,7 @@ For edge devices requiring automatic start on boot and crash recovery:
    ~/.config/sentry/
    ├── sentry.toml               # Primary TOML configuration file
    ├── data/
-   │   └── sentry_ledger.db      # Embedded SQLite WAL audit database
+   │   └── sentry_ledger.db      # Embedded ACID WAL audit ledger database
    └── logs/
        ├── sentry_audit.jsonl    # Nanosecond cryptographic SHA-256 event log
        └── sentry_daemon.stdout  # Supervisor console output
@@ -236,7 +236,7 @@ graph TD
 ---
 
 ### 4.1 Soft Uninstall (Preserve Config & Audit History)
-To remove the application binary while retaining your historical SQLite ledgers and cryptographic audit logs:
+To remove the application binary while retaining your historical audit ledgers and cryptographic event logs:
 
 ```bash
 # 1. Stop active daemon or systemd service
@@ -254,7 +254,7 @@ echo "✔ Sentry-Edge binaries removed. Configuration and audit logs preserved i
 ---
 
 ### 4.2 Complete Clean Purge (Remove Everything)
-To completely remove all traces of `sentry-edge`, including configuration files, SQLite incident databases, cryptographic JSONL logs, PID files, and generated dossiers:
+To completely remove all traces of `sentry-edge`, including configuration files, incident audit ledgers, cryptographic JSONL logs, PID files, and generated dossiers:
 
 ```bash
 # 1. Stop all active processes and services
@@ -269,7 +269,7 @@ pkill -9 -f sentry-edge 2>/dev/null || true
 rm -f ~/.local/bin/sentry-edge
 rm -f ~/.local/bin/sentry-daemon.sh
 
-# 3. Purge configuration, SQLite databases, and telemetry logs
+# 3. Purge configuration, audit ledger databases, and telemetry logs
 rm -rf ~/.config/sentry
 rm -rf ~/.local/share/sentry-edge
 

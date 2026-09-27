@@ -17,10 +17,10 @@ sentry-edge/
 │   ├── sentry-core/            # DSP math, acoustic RMS, PlatformInfo, PlatformPaths, SentryAlert
 │   ├── sentry-hardware/        # Trait-based HAL: Linux (ALSA/V4L2), macOS, Windows, Procedural
 │   ├── sentry-telemetry/       # Picosecond timers, 5W1H model, rolling SHA-256 hash-chain engine
-│   ├── sentry-ledger/          # Embedded SQLite WAL incident database & CRUD sink
+│   ├── sentry-ledger/          # Embedded ACID WAL incident ledger database & CRUD sink
 │   ├── sentry-report/          # Decoupled SST report engine, narrative storyteller & 6 formatters
-│   ├── sentry-bridge/          # Outbound-only TLS WebSocket tunnel client for Conduit
-│   ├── sentry-telepresence/    # LiveKit SFU JWT generation & WebRTC 2-way intercom bridge
+│   ├── sentry-bridge/          # Outbound-only TLS WebSocket tunnel client for relay gateways
+│   ├── sentry-telepresence/    # WebRTC Media Server / SFU JWT generation & 2-way intercom bridge
 │   ├── sentry-client/          # Remote operator HUD and live alert ingestion client
 │   └── sentry-cli/             # Binary entrypoint: daemon, client, monitor, profile, logs, report
 └── docs/
@@ -35,10 +35,10 @@ graph TD
     CLI["crates/sentry-cli<br/>(Binary Entrypoint)"] --> Core["crates/sentry-core<br/>(DSP Math & Models)"]
     CLI --> HW["crates/sentry-hardware<br/>(Trait-Based HAL)"]
     CLI --> Telem["crates/sentry-telemetry<br/>(5W1H & SHA-256 Engine)"]
-    CLI --> Ledger["crates/sentry-ledger<br/>(SQLite WAL Persistence)"]
+    CLI --> Ledger["crates/sentry-ledger<br/>(Embedded WAL Ledger)"]
     CLI --> Report["crates/sentry-report<br/>(SST Report Engine)"]
-    CLI --> Bridge["crates/sentry-bridge<br/>(WSS Conduit Tunnel)"]
-    CLI --> Telep["crates/sentry-telepresence<br/>(LiveKit WebRTC Intercom)"]
+    CLI --> Bridge["crates/sentry-bridge<br/>(WSS Relay Tunnel)"]
+    CLI --> Telep["crates/sentry-telepresence<br/>(WebRTC Intercom Bridge)"]
     CLI --> Client["crates/sentry-client<br/>(Operator Console HUD)"]
 
     HW --> Core
@@ -119,7 +119,7 @@ The decoupled report engine converts nanosecond/picosecond raw telemetry streams
 
 ```mermaid
 graph LR
-    Input["Telemetry Ingestion<br/>(JSONL Stream or SQLite DB)"] --> SST["SST ReportDocument Builder<br/>(Storyteller & Orchestrator)"]
+    Input["Telemetry Ingestion<br/>(JSONL Stream or Ledger DB)"] --> SST["SST ReportDocument Builder<br/>(Storyteller & Orchestrator)"]
 
     SST --> HTML["HTML5 Zero-CDN Dashboard<br/>(Interactive Accordions & HUD Viewfinder)"]
     SST --> TXT["ASCII Text Dossier<br/>(High-Impact Terminal Report)"]
@@ -185,7 +185,7 @@ Every operation on the edge is recorded with forensic-grade 5W1H provenance and 
     "duration_ps": 54560000
   },
   "how": {
-    "protocol": "HAL_DSP -> V4L2_MMAP -> SQLITE_WAL -> WSS_TLS",
+    "protocol": "HAL_DSP -> V4L2_MMAP -> LEDGER_WAL -> WSS_TLS",
     "transport": "Local Hardware Loop",
     "cipher": "ChaCha20-Poly1305 / HMAC-SHA256",
     "compression": "zstd"
@@ -194,7 +194,7 @@ Every operation on the edge is recorded with forensic-grade 5W1H provenance and 
     "cpu_rss_mb": 18.2,
     "dsp_ema_alpha": 0.15,
     "wal_page_count": 1,
-    "sqlite_commit_ns": 25000,
+    "ledger_commit_ns": 25000,
     "network_rtt_ms": 1.0
   },
   "prev_record_hash": "f769010900b97acdbbed20919e3e946d0005aad6df32fc1178315f6d3d6194dd",

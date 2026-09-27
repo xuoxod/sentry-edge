@@ -19,26 +19,26 @@
 
 ## 📚 Dedicated Documentation & Field Manuals
 
-* 📖 [**Comprehensive Operator Guide & Field Manual**](docs/OPERATOR_GUIDE.md) (`SENTRY-DOC-OP-01`): Real-world soak deployment walkthrough, 119 verified records, ambient TV/Echo DSP adaptation, handclap spike mechanics (86.2 dB SPL), and the *"If You Wanted to Know / See If..."* operator playbook.
-* 📦 [**Installation & Uninstallation Manual**](docs/INSTALLATION_AND_UNINSTALLATION.md) (`SENTRY-DOC-INST-01`): Multi-OS system requirements, static Musl deployment, background daemon supervision, systemd unit integration, and complete clean purge procedures.
-* 🛠️ [**Exhaustive Daemon & CLI Reference Manual**](docs/DAEMON_AND_CLI_REFERENCE.md) (`SENTRY-DOC-CLI-01`): Full command-by-command reference for `sentry-daemon.sh` (`start|stop|status|logs|stats|verify|report`) and all `sentry-edge` CLI subcommands with internal mechanics and real-world failure recovery.
+* 📖 [**Comprehensive Operator Guide & Field Manual**](docs/OPERATOR_GUIDE.md) (`SENTRY-DOC-OP-01`): Real-world endurance deployment walkthrough, 119 verified records, ambient environmental noise DSP adaptation, acoustic spike mechanics (86.2 dB SPL), and the operator playbook.
+* 📦 [**Installation & Uninstallation Manual**](docs/INSTALLATION_AND_UNINSTALLATION.md) (`SENTRY-DOC-INST-01`): Multi-OS system requirements, static standalone deployment, background daemon supervision, systemd unit integration, and complete clean purge procedures.
+* 🛠️ [**Exhaustive Daemon & CLI Reference Manual**](docs/DAEMON_AND_CLI_REFERENCE.md) (`SENTRY-DOC-CLI-01`): Full command-by-command reference for `sentry-daemon.sh` (`start|stop|status|logs|stats|verify|report`) and all `sentry-edge` CLI subcommands with internal mechanics and failure recovery.
 * 🏛️ [**Architecture, HAL & Report Engine Specification**](docs/ARCHITECTURE_AND_HAL.md) (`SENTRY-DOC-ARCH-01`): 9-crate micro-OJP taxonomy, trait-based HAL, single-source-of-truth (SST) report orchestrator, 5W1H provenance model, and rolling SHA-256 blockchain hash-chain engine.
 
 ---
 
 ## 🏛️ System Vision: Why Sentry-Edge?
 
-Commercial security cameras (Ring, Nest, Wyze, Arlo) force an unacceptable privacy compromise: they stream raw home/office video to third-party cloud data centers, enforce monthly recurring SaaS fees, and cannot execute programmable edge logic when internet connectivity drops.
+Commercial security cameras force an unacceptable privacy compromise: they stream raw home and office video to third-party corporate data centers, enforce monthly recurring subscription fees, and cannot execute programmable edge logic when internet connectivity drops.
 
 **SENTRY-EDGE** delivers the sovereign, zero-cloud alternative:
-* 🛡️ **Zero Open Inbound Ports**: Dials *outward-only* to your self-hosted [**Conduit Relay**](https://github.com/xuoxod/conduit) over encrypted TLS WebSockets.
-* 🎙️ **Acoustic Noise Watchdog**: Continuous sliding-window RMS audio analysis detects sudden acoustic anomalies ($+20\text{ dB SPL}$ over baseline, glass breaking, sirens, intrusions).
-* 📸 **V4L2 Burst Sentinel**: Automatically triggers a 5-frame 1080p JPEG burst upon acoustic breach with hardware LED isolation (camera powers down immediately after frame release).
-* ⚡ **Sub-10ms LiveKit SFU Telepresence**: Stream real-time 60FPS video and two-way walkie-talkie intercom directly to any mobile phone browser worldwide.
+* 🛡️ **Zero Open Inbound Ports**: Dials *outward-only* to your self-hosted encrypted TLS WebSocket relay gateway without exposing local listening ports.
+* 🎙️ **Acoustic Noise Watchdog**: Continuous sliding-window RMS audio analysis detects sudden acoustic anomalies ($+20\text{ dB SPL}$ over baseline, glass breaking, sirens, forced entry).
+* 📸 **Burst Optical Sentinel**: Automatically triggers a 5-frame 1080p JPEG burst upon acoustic breach with hardware LED isolation (camera sensor powers down immediately after frame release).
+* ⚡ **Sub-10ms WebRTC Telepresence**: Stream real-time 60FPS video and two-way walkie-talkie intercom directly to any mobile browser worldwide via low-latency media relays.
 * ⏱️ **Nanosecond / Picosecond Provenance**: Meticulous telemetry tracking (`Who`, `From`, `To`, `What`, `How`, `Minutiae`) sealed with an immutable cryptographic SHA-256 blockchain hash chain.
 * 📊 **Decoupled SST Report Engine**: Exports self-contained, zero-CDN interactive HTML dashboards, ASCII text dossiers, RFC 4180 CSV, JSON, and Markdown briefs.
 * 🔬 **Trait-Based HAL**: Native Linux ALSA & V4L2, macOS CoreAudio & AVFoundation, Windows WASAPI & MediaFoundation, with automatic procedural simulation fallback.
-* 📦 **100% Platform-Agnostic Static Binary**: Built with `x86_64-unknown-linux-musl` and `crt-static`, eliminating all `GLIBC_X.XX not found` library mismatches.
+* 📦 **100% Platform-Agnostic Static Binary**: Built with `x86_64-unknown-linux-musl` and `crt-static`, eliminating all dynamic library and libc mismatches.
 
 ---
 
@@ -55,7 +55,7 @@ Commercial surveillance hardware companies have created a subscription lock-in r
 flowchart LR
     subgraph SurveillanceEmpire ["🏰 Cloud Surveillance Monopoly (The Old Empire)"]
         direction TB
-        VendorCam["Ring / Nest / Wyze Cameras\n💸 $10 - $50/mo per-camera subscription"]
+        VendorCam["Commercial Cameras\n💸 $10 - $50/mo per-camera subscription"]
         CloudStream["Mandatory Cloud Uploads\n👁️ Private audio/video parsed on vendor servers"]
         InboundHoles["Open Inbound NAT Holes\n⚠️ Vulnerable to IoT botnets & credential stuffing"]
     end
@@ -64,15 +64,11 @@ flowchart LR
         direction TB
         ZeroCost["Self-Hosted Commodity Hardware\n💎 $0.00 / Zero Subscriptions Forever"]
         LocalAudit["Local Immutable SHA-256 Chain\n⛓️ Cryptographic Forensic Provenance"]
-        OutboundMesh["Zero Inbound Ports\n🛡️ Outward-Only Encrypted TLS / LiveKit SFU"]
+        OutboundMesh["Zero Inbound Ports\n🛡️ Outward-Only Encrypted TLS / WebRTC SFU"]
     end
 
     SurveillanceEmpire -.->|"Physical Emancipation"| SentryFrontier
 ```
-
-### 🧬 Sovereign Provenance: The Human-AI Vanguard
-
-`sentry-edge` was forged through rigorous human-AI pair programming, pairing human standards of physical privacy and zero-cloud reliance with agentic verification. From trait-based HAL abstraction across Linux, macOS, and Windows to sub-10ms WebRTC pipeline orchestration and immutable SHA-256 blockchain hashing, the codebase proves that independent developers pairing with an AI thinking partner can out-build multi-million dollar corporate hardware surveillance ecosystems.
 
 ---
 
@@ -81,29 +77,29 @@ flowchart LR
 ```mermaid
 graph TD
     subgraph EdgeDevice["🏠 Physical Sentinel Node (Laptop / Pi / Mini-PC)"]
-        Mic["🎙️ ALSA/PipeWire Continuous RMS Stream"]
-        Cam["📸 Native V4L2 Device (`/dev/video0`)"]
-        SentryDaemon["🛡️ `sentry-edge run`<br/>• Acoustic Analyzer<br/>• Burst Capturer<br/>• SQLite WAL Ledger<br/>• Nanosecond Telemetry Engine"]
+        Mic["🎙️ Continuous Audio RMS Stream"]
+        Cam["📸 Native Video Capture Device (`/dev/video0`)"]
+        SentryDaemon["🛡️ `sentry-edge run`<br/>• Acoustic Analyzer<br/>• Burst Capturer<br/>• Embedded WAL Ledger<br/>• Nanosecond Telemetry Engine"]
     end
 
-    subgraph SovereignBackend["🌐 Your Self-Hosted Backend Infrastructure"]
-        ConduitRelay["🔌 `conduit-relay` Gateway<br/>(relay.example.com:8084)"]
-        LiveKitSFU["⚡ LiveKit SFU Media Server<br/>(sfu.example.com:7880)"]
+    subgraph SovereignBackend["🌐 Self-Hosted Backend Infrastructure"]
+        RelayGateway["🔌 Outbound Relay Gateway<br/>(relay.example.com:8084)"]
+        MediaSFU["⚡ WebRTC Media Server (SFU)<br/>(sfu.example.com:7880)"]
     end
 
     subgraph OperatorViewport["📱 Remote End-User / Operator Client"]
         ClientApp["💻 `sentry-edge client`<br/>• Live Alert Ingestion<br/>• Instant Snapshot View<br/>• Push-to-Talk Intercom"]
-        MobileHUD["🌐 Mobile Web HUD (Any Browser)<br/>• Sub-10ms LiveKit SFU Video"]
+        MobileHUD["🌐 Mobile Web HUD (Any Browser)<br/>• Sub-10ms Low-Latency Video"]
     end
 
     Mic --> SentryDaemon
     Cam --> SentryDaemon
-    SentryDaemon <== "Outbound-Only TLS WebSocket (0 Open Ports)" ==> ConduitRelay
-    SentryDaemon -.->|"Sub-10ms WebRTC DataChannel"| LiveKitSFU
-    ConduitRelay <== "Encrypted WebSocket Stream" ==> ClientApp
-    ConduitRelay <== "Encrypted HTTPS / WSS" ==> MobileHUD
-    LiveKitSFU -.->|"Low-Latency Telepresence Stream"| ClientApp
-    LiveKitSFU -.->|"Low-Latency Telepresence Stream"| MobileHUD
+    SentryDaemon <== "Outbound-Only TLS WebSocket (0 Open Ports)" ==> RelayGateway
+    SentryDaemon -.->|"Sub-10ms WebRTC DataChannel"| MediaSFU
+    RelayGateway <== "Encrypted WebSocket Stream" ==> ClientApp
+    RelayGateway <== "Encrypted HTTPS / WSS" ==> MobileHUD
+    MediaSFU -.->|"Low-Latency Telepresence Stream"| ClientApp
+    MediaSFU -.->|"Low-Latency Telepresence Stream"| MobileHUD
 ```
 
 ---
@@ -124,7 +120,7 @@ graph TD
 
 ### 1. Build Zero-Dependency Static Release Binary
 ```bash
-# Build 100% standalone static binary (zero host glibc dependencies)
+# Build 100% standalone static binary (zero host library dependencies)
 cargo build --release --target x86_64-unknown-linux-musl
 
 # Verify static linking
@@ -168,12 +164,12 @@ file target/x86_64-unknown-linux-musl/release/sentry-edge
 | Crate | Responsibility & Invariant |
 | :--- | :--- |
 | [`crates/sentry-core`](crates/sentry-core) | Core DSP math, acoustic RMS, platform paths, configuration parser, and alert models. |
-| [`crates/sentry-hardware`](crates/sentry-hardware) | Trait-based Hardware Abstraction Layer (HAL) for Linux (ALSA/V4L2), macOS, Windows, and Procedural fallback. |
+| [`crates/sentry-hardware`](crates/sentry-hardware) | Trait-based Hardware Abstraction Layer (HAL) for Linux, macOS, Windows, and Procedural fallback. |
 | [`crates/sentry-telemetry`](crates/sentry-telemetry) | Picosecond timers, 5W1H micro-provenance, and immutable rolling SHA-256 blockchain hash-chain engine. |
-| [`crates/sentry-ledger`](crates/sentry-ledger) | Embedded SQLite WAL incident database and persistence sink. |
+| [`crates/sentry-ledger`](crates/sentry-ledger) | Embedded local ACID write-ahead log (WAL) incident database and persistence sink. |
 | [`crates/sentry-report`](crates/sentry-report) | Decoupled Single Source of Truth (SST) report orchestrator, narrative storyteller, and 6 multi-format exporters. |
-| [`crates/sentry-bridge`](crates/sentry-bridge) | Outbound-only TLS WebSocket tunnel client for Conduit relays. |
-| [`crates/sentry-telepresence`](crates/sentry-telepresence) | LiveKit SFU JWT generation and sub-10ms WebRTC 2-way walkie-talkie intercom bridge. |
+| [`crates/sentry-bridge`](crates/sentry-bridge) | Outbound-only TLS WebSocket tunnel client for sovereign edge relays. |
+| [`crates/sentry-telepresence`](crates/sentry-telepresence) | Sub-10ms WebRTC 2-way walkie-talkie intercom bridge and session token generation. |
 | [`crates/sentry-client`](crates/sentry-client) | Remote operator HUD and live incoming alert ingestion console. |
 | [`crates/sentry-cli`](crates/sentry-cli) | Main binary entrypoint supporting daemon, client, monitor, profile, logs, and report subcommands. |
 

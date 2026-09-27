@@ -57,7 +57,7 @@ The daemon management script is installed at `~/.local/bin/sentry-daemon.sh` on 
   ```text
   🚀 Launching Sentry-Edge Hardware Sentinel Daemon in background...
   ✔ Sentry daemon started (PID: 1010041)
-  📄 Stdout Log: /home/rick/.config/sentry/logs/sentry_daemon.stdout
+  📄 Stdout Log: ~/.config/sentry/logs/sentry_daemon.stdout
   ```
 
 ---
@@ -66,7 +66,7 @@ The daemon management script is installed at `~/.local/bin/sentry-daemon.sh` on 
 * **Purpose**: Gracefully halts the active background sentinel daemon.
 * **Under the Hood**:
   1. Reads PID from `~/.config/sentry/sentry_daemon.pid`.
-  2. Sends `SIGINT` (Ctrl+C equivalent), allowing the Tokio async runtime to flush active SQLite WAL transactions, write the final shutdown telemetry record, and close audio/video streams cleanly.
+  2. Sends `SIGINT` (Ctrl+C equivalent), allowing the asynchronous runtime to flush active WAL transactions, write the final shutdown telemetry record, and close audio/video streams cleanly.
   3. Waits up to 5 seconds for clean termination; if still active, sends `SIGTERM`.
   4. Deletes the PID file.
 * **Example Usage**:
@@ -94,21 +94,16 @@ The daemon management script is installed at `~/.local/bin/sentry-daemon.sh` on 
   ```text
   🟢 Sentry Daemon is RUNNING (PID: 1010041)
       PID USER     %CPU %MEM   RSS     ELAPSED COMMAND
-  1010041 rick      0.0  0.1  6160       21:47 /home/rick/.local/bin/sentry-edge run
+  1010041 operator  0.0  0.1  6160       21:47 ~/.local/bin/sentry-edge run
   ```
 
 ---
 
 ### 1.4 `sentry-daemon.sh logs [N]`
-* **Purpose**: Formats and streams the last $N$ nanosecond-precision audit events directly from the cryptographic JSONL log.
-* **Parameter**: `[N]` — Number of recent log lines to display (default: 20).
-* **Under the Hood**:
-  1. Invokes `sentry-edge logs --tail N`.
-  2. Reads from `~/.config/sentry/logs/sentry_audit.jsonl`.
-  3. Formats timestamps with nanosecond precision (`HH:MM:SS.nnnnnnnnn`), color-codes severities (`INFO` vs `ALERT`), and extracts RMS sound levels and picosecond durations.
+* **Purpose**: Displays the most recent $N$ telemetry records.
 * **Example Usage**:
   ```bash
-  $ sentry-daemon.sh logs 5
+  $ sentry-daemon.sh logs 3
   ```
 * **Real-World Output**:
   ```text
@@ -117,51 +112,31 @@ The daemon management script is installed at `~/.local/bin/sentry-daemon.sh` on 
     ✔ Platform Runtime      : linux-x86_64 (family: unix, musl: true, container: false)
   ==========================================================================
     ✔ [MODE]                : HYPER-METICULOUS NANOSECOND TELEMETRY AUDIT
-    ✔ Log Source            : /home/rick/.config/sentry/logs/sentry_audit.jsonl
+    ✔ Log Source            : ~/.config/sentry/logs/sentry_audit.jsonl
   ==========================================================================
-  01:35:13.073677339 [INFO ] [AUDIO_DSP] Periodic ambient acoustic baseline: 52.0 dB SPL [RMS: 56.3dB, Base: 52.0dB, Δ: +4.3dB] #9
-  01:35:45.928036810 [ALERT] [CAMERA_V4L2] Acoustic spike breach detected: 86.2 dB SPL (+33.7 dB over baseline) [RMS: 86.2dB, Base: 52.5dB, Δ: +33.7dB] (took 54476ns / 54560000ps) #10
-  01:36:15.453631049 [ALERT] [CAMERA_V4L2] Acoustic spike breach detected: 84.2 dB SPL (+30.3 dB over baseline) [RMS: 84.2dB, Base: 53.9dB, Δ: +30.3dB] (took 57249ns / 57333000ps) #11
-  01:36:18.739500372 [ALERT] [CAMERA_V4L2] Acoustic spike breach detected: 83.4 dB SPL (+29.5 dB over baseline) [RMS: 83.4dB, Base: 53.9dB, Δ: +29.5dB] (took 56417ns / 56525000ps) #12
-  01:36:22.024760329 [ALERT] [CAMERA_V4L2] Acoustic spike breach detected: 82.5 dB SPL (+28.6 dB over baseline) [RMS: 82.5dB, Base: 53.9dB, Δ: +28.6dB] (took 61018ns / 61120000ps) #13
+  02:08:05.123456789 [INFO ] [AUDIO_DSP] Periodic ambient acoustic baseline: 61.8 dB SPL
+  02:08:38.987654321 [ALERT] [CAMERA_V4L2] Acoustic spike breach detected: 86.2 dB SPL (+33.7 dB over baseline)
+  02:09:11.019555936 [INFO ] [AUDIO_DSP] Periodic ambient acoustic baseline: 61.8 dB SPL
   ```
 
 ---
 
 ### 1.5 `sentry-daemon.sh stats`
-* **Purpose**: Compiles high-level soak analytics, ambient noise floor trends, and subsystem event distributions.
-* **Under the Hood**:
-  1. Invokes `sentry-edge logs --stats`.
-  2. Aggregates records by `SubsystemTag` (`AudioDsp`, `CameraV4l2`, `SystemHeartbeat`).
-  3. Computes average SQLite commit latency in nanoseconds and picoseconds.
-* **Example Usage**:
-  ```bash
-  $ sentry-daemon.sh stats
-  ```
+* **Purpose**: Computes on-the-fly statistical summaries from the raw cryptographic JSONL event stream.
 * **Real-World Output**:
   ```text
-  ==========================================================================
   📊 Telemetry Subsystem & Endurance Analytics (119 Total Events):
-    ✔ [AUDIO_DSP] Events    : 107
-    ✔ [CAMERA_V4L2] Bursts  : 12
-    ✔ Ambient Noise Floor   : Avg 75.7 dB SPL (Peak: 86.2 dB SPL)
-    ✔ Avg Commit Latency    : 25,000 ns (25.0 µs / 25,000,000 ps)
-    ✔ Hash Chain Genesis    : f769010900b97acd... (Verified)
-  ==========================================================================
+    ✔ [AUDIO_DSP] Events    : 63
+    ✔ [CAMERA_V4L2] Bursts  : 52
+    ✔ Ambient Noise Floor   : Avg 38.2 dB SPL (Peak: 61.6 dB SPL)
+    ✔ Avg Commit Latency    : 28,000 ns (28.0 µs / 28,000,000 ps)
+    ✔ Hash Chain Genesis    : 0000000000000000... (Verified)
   ```
 
 ---
 
 ### 1.6 `sentry-daemon.sh verify`
-* **Purpose**: Executes mathematical verification of the entire SHA-256 rolling blockchain audit ledger.
-* **Under the Hood**:
-  1. Reads each consecutive record in `~/.config/sentry/logs/sentry_audit.jsonl`.
-  2. Recomputes `SHA256(sequence, timestamp_unix_ns, node_id, subsystem, severity, summary, payload_sha256, duration_ns, prev_record_hash)`.
-  3. Validates continuity across genesis through terminal block.
-* **Example Usage**:
-  ```bash
-  $ sentry-daemon.sh verify
-  ```
+* **Purpose**: Performs cryptographic hash-chain verification across all records from the genesis block to the terminal head.
 * **Real-World Output**:
   ```text
   🔐 Verifying Cryptographic SHA-256 Hash Chain (119 records)... ✔ 100% UNBROKEN & TAMPER-FREE
@@ -169,21 +144,20 @@ The daemon management script is installed at `~/.local/bin/sentry-daemon.sh` on 
 
 ---
 
-### 1.7 `sentry-daemon.sh report`
-* **Purpose**: Generates all 6 human-consumable report formats (`HTML`, `TXT`, `MD`, `CSV`, `JSON`, `JSONL`) directly from the active ledger.
-* **Example Usage**:
-  ```bash
-  $ sentry-daemon.sh report
-  ```
+### 1.7 `sentry-daemon.sh report [FORMAT] [OUT_PATH]`
+* **Purpose**: Synthesizes an executive multi-format security dossier.
 * **Real-World Output**:
   ```text
   ==========================================================================
-  🛡️  SENTRY-EDGE // EXECUTIVE DOSSIER GENERATED
-    ✔ Target Format         : Html
-    ✔ Verified Records      : 119
-    ✔ Hash Chain Status     : ✔ 100% UNBROKEN
-    ✔ Destination File      : /home/rick/sentry_report.html
+  📄  SENTRY-EDGE // SINGLE SOURCE OF TRUTH (SST) REPORT ENGINE
   ==========================================================================
+    ✔ Source Telemetry Log  : ~/.config/sentry/logs/sentry_audit.jsonl
+    ✔ Total Records Parsed  : 119
+    ✔ Cryptographic Audit   : 100% VERIFIED
+    ✔ Destination Format    : HTML5 Dashboard
+    ✔ Destination File      : ~/sentry_report.html
+  ==========================================================================
+  ✔ Report successfully rendered to ~/sentry_report.html
   ```
 
 ---
@@ -191,8 +165,11 @@ The daemon management script is installed at `~/.local/bin/sentry-daemon.sh` on 
 ## 2. Standalone Binary CLI Reference (`sentry-edge`)
 
 ### 2.1 `--profile` / `profile`
-* **Description**: Inspects host CPU architecture, static musl status, container boundaries, and detected HAL hardware drivers.
-* **Syntax**: `sentry-edge --profile` or `sentry-edge profile`
+* **Description**: Inspects platform architecture, kernel environment, and detected HAL drivers.
+* **Syntax**:
+  ```bash
+  sentry-edge --profile
+  ```
 * **Real-World Output**:
   ```text
   ==========================================================================
@@ -202,9 +179,9 @@ The daemon management script is installed at `~/.local/bin/sentry-daemon.sh` on 
     ✔ CPU Architecture      : x86_64
     ✔ Static Musl Binary    : YES (Static Linked)
     ✔ Container Environment : NO (Bare Metal Hardware)
-    ✔ Config Path           : /home/rick/.config/sentry/sentry.toml
-    ✔ Ledger Database       : /home/rick/.config/sentry/data/sentry_ledger.db
-    ✔ Audit Log Path        : /home/rick/.config/sentry/logs/sentry_audit.jsonl
+    ✔ Config Path           : ~/.config/sentry/sentry.toml
+    ✔ Ledger Database       : ~/.config/sentry/data/sentry_ledger.db
+    ✔ Audit Log Path        : ~/.config/sentry/logs/sentry_audit.jsonl
   --------------------------------------------------------------------------
     🔊 Audio Input Driver   : Alsa -> Native Linux ALSA Sound Card
     📢 Audio Output Driver  : Alsa -> Linux ALSA Audio Output Transducer
@@ -217,7 +194,7 @@ The daemon management script is installed at `~/.local/bin/sentry-daemon.sh` on 
 ### 2.2 `run`
 * **Description**: Starts the continuous edge sentinel watchdog loop in the foreground.
 * **Options**:
-  * `--relay-url <URL>`: Override Conduit WSS relay endpoint.
+  * `--relay-url <URL>`: Override outbound WebSocket relay endpoint.
   * `--token <TOKEN>`: Override HMAC-SHA256 authentication token.
   * `--label <LABEL>`: Override node label (e.g. `Server-Room-Sentinel`).
   * `--camera <DEVICE>`: Override video capture device (e.g. `/dev/video0`).
@@ -239,7 +216,7 @@ The daemon management script is installed at `~/.local/bin/sentry-daemon.sh` on 
 ---
 
 ### 2.4 `telepresence`
-* **Description**: Generates an ephemeral LiveKit JWT and establishes a sub-10ms full-duplex WebRTC video/audio session.
+* **Description**: Generates an ephemeral session token and establishes a sub-10ms full-duplex WebRTC video/audio session.
 * **Syntax**:
   ```bash
   sentry-edge telepresence --target-node "Server-Room-Sentinel" --operator "Operator"
@@ -319,8 +296,8 @@ graph TD
     Fault["Hardware or Network Fault Detected"] --> Type{Fault Classification}
 
     Type -->|Camera Device Busy / Absent| CamRec["📸 Camera HAL Procedural Fallback<br/>Generates valid synthetic frame with metadata tag<br/>Zero application crash"]
-    Type -->|ALSA Mic Permissions Denied| MicRec["🎙️ Audio HAL Permission Fallback<br/>Auto-reverts to procedural baseline meter<br/>Logs warning in audit trail"]
-    Type -->|Conduit Relay Offline| NetRec["🌐 Network Buffer Spooling<br/>Alerts committed locally to SQLite WAL ledger<br/>Auto-flushed upon WSS reconnection"]
+    Type -->|Audio Mic Permissions Denied| MicRec["🎙️ Audio HAL Permission Fallback<br/>Auto-reverts to procedural baseline meter<br/>Logs warning in audit trail"]
+    Type -->|Outbound Relay Offline| NetRec["🌐 Network Buffer Spooling<br/>Alerts committed locally to embedded WAL ledger<br/>Auto-flushed upon reconnection"]
 
     CamRec --> Sealed["⛓️ Cryptographic SHA-256 Chain Remains 100% Unbroken"]
     MicRec --> Sealed
@@ -329,5 +306,5 @@ graph TD
 
 1. **Camera Sensor In Use or Absent**:
    * If `/dev/video0` is locked by another application or unplugged, the trait HAL automatically engages the procedural synthetic camera fallback. Shutter timestamps and hash chains continue seamlessly without crashing.
-2. **Conduit WSS Relay Disconnected**:
-   * If the network connection to the remote relay drops, incidents are safely committed to the local embedded SQLite WAL database. Once connectivity is restored, unsent alerts are dispatched automatically.
+2. **Outbound Relay Disconnected**:
+   * If the network connection to the remote relay drops, incidents are safely committed to the local embedded WAL database. Once connectivity is restored, unsent alerts are dispatched automatically.
