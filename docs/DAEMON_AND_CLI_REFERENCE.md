@@ -233,7 +233,7 @@ The daemon management script is installed at `~/.local/bin/sentry-daemon.sh` on 
 * **Description**: Launches the end-user operator console for monitoring remote sentinel nodes.
 * **Syntax**:
   ```bash
-  sentry-edge client --operator "Rick" --watch-node "Server-Room-Sentinel"
+  sentry-edge client --operator "Operator" --watch-node "Server-Room-Sentinel"
   ```
 
 ---
@@ -242,7 +242,7 @@ The daemon management script is installed at `~/.local/bin/sentry-daemon.sh` on 
 * **Description**: Generates an ephemeral LiveKit JWT and establishes a sub-10ms full-duplex WebRTC video/audio session.
 * **Syntax**:
   ```bash
-  sentry-edge telepresence --target-node "Server-Room-Sentinel" --operator "Rick"
+  sentry-edge telepresence --target-node "Server-Room-Sentinel" --operator "Operator"
   ```
 
 ---

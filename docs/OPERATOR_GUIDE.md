@@ -80,7 +80,7 @@ When `sentry-edge` boots, it immediately connects to the host audio input device
 
 ### 2. Live Soak Test Ground Truth: What Happens During an Incident
 
-During real-world testing on Rick's Crunchbang laptop (`xua` / `192.168.1.160`), the sentinel recorded **119 verified events** with background music playing from 4 Amazon Echos:
+During real-world testing across an edge hardware node (`node-02-edge`), the sentinel recorded **119 verified events** with background music playing from multiple smart speakers:
 
 ```text
   [dB Monitor #110]: Current  74.8 dB | Baseline:  75.2 dB  ██████████████
